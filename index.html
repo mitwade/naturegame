@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nature — Build a Shared World</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="screen-menu" class="screen">
+  <h1 class="menu-title">🌍 NATURE</h1>
+  <p class="menu-subtitle">Build a shared world. Score is yours alone.</p>
+  <div class="mode-grid">
+    <div class="mode-card" data-mode="solo">
+      <h3>🤖 Solo vs Bots</h3>
+      <p>Play against 1–5 computer opponents on this device.</p>
+    </div>
+    <div class="mode-card" data-mode="pass">
+      <h3>📱 Pass & Play</h3>
+      <p>2–6 players share this device, passing it each turn. Bots optional.</p>
+    </div>
+    <div class="mode-card" data-mode="online">
+      <h3>🌐 Play Online</h3>
+      <p>Create or join a game code and play with others on their own devices. Bots optional.</p>
+    </div>
+  </div>
+  <div class="card-panel gap-top" style="margin-top:24px;">
+    <h3>How to play</h3>
+    <p>Place hexagonal terrain tiles onto the shared board to complete geometric
+    patterns (Triangle = 1pt, Elbow = 2pt, Straight Line = 3pt) shown on your
+    Nature Cards, then claim them from your hand or the public Bank. Most
+    points after 3 rounds wins.</p>
+  </div>
+</div>
+
+<!-- ============ LOCAL SETUP (solo / pass-and-play) ============ -->
+<div id="screen-local-setup" class="screen hidden">
+  <h2 id="local-setup-title">Set Up Players</h2>
+  <div class="card-panel">
+    <div id="player-list"></div>
+    <div class="row gap-top">
+      <button id="btn-add-human" class="secondary small">+ Add Human</button>
+      <button id="btn-add-bot" class="secondary small">+ Add Bot</button>
+    </div>
+  </div>
+  <div class="row between">
+    <button class="secondary" id="btn-local-back">← Back</button>
+    <button id="btn-local-start">Start Game</button>
+  </div>
+</div>
+
+<!-- ============ ONLINE SETUP ============ -->
+<div id="screen-online-setup" class="screen hidden">
+  <h2>Play Online</h2>
+  <div class="card-panel">
+    <label>Your name</label><br/>
+    <input id="online-name" type="text" placeholder="Your name" value="Player" />
+  </div>
+  <div class="card-panel">
+    <h3>Create a new game</h3>
+    <p>Get a short code to share with friends.</p>
+    <button id="btn-online-create">Create Game</button>
+  </div>
+  <div class="card-panel">
+    <h3>Join a game</h3>
+    <input id="online-join-code" type="text" placeholder="Enter code" maxlength="5" style="text-transform:uppercase; width:120px;" />
+    <button id="btn-online-join">Join</button>
+  </div>
+  <div id="online-setup-error" style="color:#e08383;"></div>
+  <button class="secondary gap-top" id="btn-online-back">← Back</button>
+</div>
+
+<!-- ============ ONLINE LOBBY ============ -->
+<div id="screen-online-lobby" class="screen hidden">
+  <h2>Lobby</h2>
+  <div class="card-panel">
+    <p>Share this code with other players:</p>
+    <div class="online-code" id="lobby-code">-----</div>
+    <div id="lobby-players"></div>
+    <div class="row gap-top" id="lobby-host-controls">
+      <button id="btn-lobby-add-bot" class="secondary small">+ Add Bot</button>
+      <button id="btn-lobby-start">Start Game</button>
+    </div>
+    <p id="lobby-wait-msg" class="hidden">Waiting for the host to start the game…</p>
+  </div>
+  <button class="secondary" id="btn-lobby-leave">← Leave</button>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div id="screen-game" class="screen hidden" style="max-width:1400px;">
+  <div class="topbar">
+    <div>
+      <strong id="game-round-label">Round 1</strong>
+      <span class="turn-status" id="game-turn-label"></span>
+    </div>
+    <div class="players-inline" id="players-inline"></div>
+  </div>
+
+  <div class="panels-grid" style="margin-top:12px;">
+    <div>
+      <div class="card-panel">
+        <div class="section-title">Shared Board</div>
+        <div id="board-scroll"><svg id="board-svg"></svg></div>
+      </div>
+      <div class="card-panel">
+        <div class="section-title">Your Tile Pool <span id="pool-count"></span></div>
+        <div class="tile-tray" id="tile-tray"></div>
+        <p id="placement-hint" style="font-size:12px; margin-top:6px;">Select a tile, then click a highlighted hex to place it.</p>
+      </div>
+      <div class="card-panel">
+        <div class="section-title">Tile Market (Draw Tiles)</div>
+        <div class="market-tray" id="market-tray"></div>
+        <div class="row gap-top">
+          <button id="btn-draw-tiles-draw" class="secondary small">Draw from pile instead</button>
+          <span id="draw-tiles-selected-label" style="font-size:12px; color:var(--text-dim);"></span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card-panel">
+        <div class="section-title">Card Bank (anyone can claim)</div>
+        <div class="bank-row" id="bank-row"></div>
+      </div>
+      <div class="card-panel">
+        <div class="section-title">Your Hand (private)</div>
+        <div class="hand-row" id="hand-row"></div>
+      </div>
+      <div class="card-panel">
+        <div class="section-title">Log</div>
+        <div class="log-box" id="log-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button id="btn-action-play-tiles">Play Tiles</button>
+    <button id="btn-action-confirm-placement" class="hidden">Confirm Placement</button>
+    <button id="btn-action-cancel-placement" class="secondary hidden">Cancel</button>
+    <button id="btn-action-draw-cards">Draw 2 Cards</button>
+    <button id="btn-action-draw-tiles">Draw Tiles</button>
+    <button id="btn-action-confirm-draw-tiles" class="hidden">Confirm Tile Draw</button>
+    <div class="spacer"></div>
+    <span class="turn-status" id="action-status"></span>
+    <button id="btn-end-turn" class="secondary" disabled>End Turn</button>
+  </div>
+</div>
+
+<!-- ============ GAME OVER ============ -->
+<div id="screen-gameover" class="screen hidden">
+  <h2>🏁 Game Over</h2>
+  <div class="card-panel">
+    <table class="final-scores-table" id="final-scores-table"></table>
+  </div>
+  <button id="btn-back-to-menu">Back to Menu</button>
+</div>
+
+<!-- ============ PASS-DEVICE OVERLAY ============ -->
+<div id="pass-device-overlay" class="pass-device-overlay hidden">
+  <h1>📱</h1>
+  <h2 id="pass-device-name"></h2>
+  <p>Pass the device to this player, then tap Ready.</p>
+  <button id="btn-pass-ready">I'm Ready</button>
+</div>
+
+<!-- Claim toast container -->
+<div id="toast-container"></div>
+
+<!-- Card-choice modal (when a placement matches more than one claimable card ambiguity, or manual claim from hand) -->
+<div id="modal-backdrop" class="modal-backdrop hidden">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- Core game modules -->
+<script src="js/constants.js"></script>
+<script src="js/hexgrid.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/tiles.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/render.js"></script>
+
+<!-- Firebase (only used for Online mode; safe to load even if unused) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebaseConfig.js"></script>
+<script src="js/online.js"></script>
+
+<script src="js/app.js"></script>
+</body>
+</html>
