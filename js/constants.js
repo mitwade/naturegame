@@ -2,7 +2,7 @@
 
 const TERRAINS = [
   "volcano", "forest", "ocean", "desert",
-  "iceberg", "meadow", "pond", "mountain"
+  "glacier", "meadow", "pond", "mountain"
 ];
 
 const TERRAIN_LABELS = {
@@ -10,33 +10,46 @@ const TERRAIN_LABELS = {
   forest: "Forest",
   ocean: "Ocean",
   desert: "Desert",
-  iceberg: "Iceberg",
+  glacier: "Glacier",
   meadow: "Meadow",
   pond: "Pond",
   mountain: "Mountain"
 };
 
-// Emoji fallback art so the game renders with zero image assets.
+// Real artwork (flat-top hex crops). Falls back to emoji/color if an image
+// fails to load (see render.js).
+const TERRAIN_IMAGES = {
+  volcano: "assets/terrain/volcano.png",
+  forest: "assets/terrain/forest.png",
+  ocean: "assets/terrain/ocean.png",
+  desert: "assets/terrain/desert.png",
+  glacier: "assets/terrain/glacier.png",
+  meadow: "assets/terrain/meadow.png",
+  pond: "assets/terrain/pond.png",
+  mountain: "assets/terrain/mountain.png"
+};
+
+// Emoji fallback art (used only if an image asset fails to load).
 const TERRAIN_EMOJI = {
   volcano: "🌋",
   forest: "🌲",
   ocean: "🌊",
   desert: "🏜️",
-  iceberg: "🧊",
+  glacier: "🧊",
   meadow: "🌸",
   pond: "🪷",
   mountain: "⛰️"
 };
 
 const TERRAIN_COLORS = {
-  volcano: "#c0532a",
-  forest: "#2f6b2f",
-  ocean: "#12768a",
-  desert: "#d8c17a",
-  iceberg: "#1651c9",
-  meadow: "#e9a8b4",
-  pond: "#2fb0c9",
-  mountain: "#4b4f54"
+  volcano: "#c0532a",   // red/orange
+  forest: "#3d6b35",    // dark green/brown
+  ocean: "#153e7a",     // dark blue
+  desert: "#d8c17a",    // tan/yellow
+  glacier: "#cfeaf5",   // white/ice
+  meadow: "#e9739a",    // pink
+  pond: "#4fc3a1",      // light blue/light green
+  mountain: "#787d82"   // grey
 };
 
 const SHAPES = ["triangle", "elbow", "line"];
@@ -63,7 +76,7 @@ const MIXED_CARDS = 24;
 
 if (typeof module !== "undefined") {
   module.exports = {
-    TERRAINS, TERRAIN_LABELS, TERRAIN_EMOJI, TERRAIN_COLORS,
+    TERRAINS, TERRAIN_LABELS, TERRAIN_IMAGES, TERRAIN_EMOJI, TERRAIN_COLORS,
     SHAPES, SHAPE_POINTS, SHAPE_LABELS,
     TILE_COUNT_PER_TERRAIN, TOTAL_TILES,
     TOTAL_CARDS, CARDS_PER_TERRAIN, MIXED_CARDS
