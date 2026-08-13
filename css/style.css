@@ -165,8 +165,13 @@ p { color: var(--text-dim); line-height: 1.5; }
   stroke: var(--accent-2);
   stroke-dasharray: 4 3;
   stroke-width: 2;
+  fill: rgba(227,178,60,0.08);
 }
-.hex.legal:hover { fill-opacity: 0.35; }
+.hex.legal:hover { fill: rgba(227,178,60,0.25); }
+.hex-outline {
+  pointer-events: none;
+}
+.hex-tile { cursor: default; }
 .hex-emoji { font-size: 22px; pointer-events: none; user-select: none; }
 .hex-empty { fill: rgba(255,255,255,0.03); }
 
@@ -191,10 +196,9 @@ p { color: var(--text-dim); line-height: 1.5; }
 .tile-chip {
   width: 46px; height: 52px;
   border-radius: 8px;
-  background: var(--panel-2);
+  background-color: var(--panel-2);
+  background-repeat: no-repeat;
   border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
   cursor: pointer;
   position: relative;
 }
@@ -205,16 +209,15 @@ p { color: var(--text-dim); line-height: 1.5; }
 .market-tile {
   width: 50px; height: 56px;
   border-radius: 8px;
-  background: var(--panel-2);
+  background-color: var(--panel-2);
+  background-repeat: no-repeat;
   border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px;
   cursor: pointer;
 }
 .market-tile.selected { border-color: var(--accent); }
 
 .nature-card {
-  width: 108px;
+  width: 112px;
   background: #f4ecd8;
   color: #2a2318;
   border-radius: 10px;
@@ -226,9 +229,8 @@ p { color: var(--text-dim); line-height: 1.5; }
   position: relative;
 }
 .nature-card.claimable { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(95,191,125,0.4); cursor: pointer; }
-.nature-card .nc-title { font-weight: 700; font-size: 9px; letter-spacing: 1px; opacity: 0.65; margin-bottom: 4px; }
-.nature-card .nc-shape-row { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 4px; }
-.nature-card .nc-hex { font-size: 20px; line-height: 1; }
+.nature-card .nc-title { font-weight: 700; font-size: 9px; letter-spacing: 1px; opacity: 0.65; margin-bottom: 2px; }
+.nature-card svg { display: block; margin: 0 auto; }
 .nature-card .nc-points { font-size: 10px; font-weight: 700; color: #7a5b1e; }
 .nature-card .nc-shapelabel { font-size: 9px; opacity: 0.7; text-transform: uppercase; }
 
