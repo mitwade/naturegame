@@ -1,34 +1,81 @@
-// Rendering helpers: hex board SVG + card/tile widgets. No framework —
-// small direct DOM/SVG builders.
+// Rendering helpers: hex board SVG + card/tile widgets, using real terrain
+// artwork (flat-top hexagons) clipped via SVG <clipPath>.
 
-const HEX_SIZE = 34; // pixel "radius" of each hex
+const HEX_SIZE = 34; // pixel "radius" (center-to-vertex) of each board hex
+const CARD_HEX_SIZE = 19; // radius for the small hex icons on Nature Cards
 
-function axialToPixel(q, r) {
-  const x = HEX_SIZE * Math.sqrt(3) * (q + r / 2);
-  const y = HEX_SIZE * 1.5 * r;
+// --- Pointy-top axial <-> pixel ---
+function axialToPixel(q, r, size = HEX_SIZE) {
+  const x = size * Math.sqrt(3) * (q + r / 2);
+  const y = size * 1.5 * r;
   return { x, y };
 }
 
-function hexPoints(cx, cy) {
+function hexPoints(cx, cy, size = HEX_SIZE) {
   const pts = [];
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 180) * (60 * i - 30);
-    pts.push(`${cx + HEX_SIZE * Math.cos(angle)},${cy + HEX_SIZE * Math.sin(angle)}`);
+    pts.push(`${cx + size * Math.cos(angle)},${cy + size * Math.sin(angle)}`);
   }
   return pts.join(" ");
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const XLINK_NS = "http://www.w3.org/1999/xlink";
 function svgEl(tag, attrs) {
   const el = document.createElementNS(SVG_NS, tag);
   Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
   return el;
 }
 
+function ensureHexClipPath(defs, size) {
+  const id = "hexClip" + Math.round(size);
+  if (defs.querySelector(`#${id}`)) return id;
+  const clip = svgEl("clipPath", { id });
+  clip.appendChild(svgEl("polygon", { points: hexPoints(0, 0, size) }));
+  defs.appendChild(clip);
+  return id;
+}
+
+function terrainHexGroup(cx, cy, terrain, size, defs, extraClass) {
+  const g = svgEl("g", { transform: `translate(${cx},${cy})`, class: extraClass || "" });
+  const clipId = ensureHexClipPath(defs, size);
+  const img = svgEl("image", {
+    x: -size * (Math.sqrt(3) / 2), y: -size,
+    width: size * Math.sqrt(3), height: size * 2,
+    preserveAspectRatio: "xMidYMid slice",
+    "clip-path": `url(#${clipId})`
+  });
+  img.setAttributeNS(XLINK_NS, "href", TERRAIN_IMAGES[terrain]);
+  img.setAttribute("href", TERRAIN_IMAGES[terrain]);
+  img.addEventListener("error", () => {
+    // Fallback if the image asset didn't load: colored hex + emoji
+    img.remove();
+    const poly = svgEl("polygon", { points: hexPoints(0, 0, size), fill: TERRAIN_COLORS[terrain] });
+    g.insertBefore(poly, g.firstChild);
+    const label = svgEl("text", { x: 0, y: size * 0.3, "text-anchor": "middle", class: "hex-emoji" });
+    label.textContent = TERRAIN_EMOJI[terrain];
+    g.appendChild(label);
+  });
+  g.appendChild(img);
+  const outline = svgEl("polygon", {
+    points: hexPoints(0, 0, size),
+    class: "hex-outline",
+    fill: "none",
+    stroke: TERRAIN_COLORS[terrain],
+    "stroke-width": Math.max(2.5, size * 0.11)
+  });
+  g.appendChild(outline);
+  return g;
+}
+
 // Renders the full board into the given <svg>. `legalSpots` is an array of
 // "q,r" keys; `onSpotClick(qr)` fires when a legal empty spot is clicked.
 function renderBoard(svg, state, legalSpots, onSpotClick) {
   svg.innerHTML = "";
+  const defs = svgEl("defs", {});
+  svg.appendChild(defs);
+
   const boardKeys = Object.keys(state.board);
   const legalSet = new Set(legalSpots || []);
   const allKeys = new Set([...boardKeys, ...legalSet]);
@@ -53,22 +100,10 @@ function renderBoard(svg, state, legalSpots, onSpotClick) {
   boardKeys.forEach(k => {
     const terrain = state.board[k];
     const { x, y } = positions[k];
-    const g = svgEl("g", {});
-    const poly = svgEl("polygon", {
-      points: hexPoints(x, y),
-      class: "hex",
-      fill: TERRAIN_COLORS[terrain]
-    });
-    g.appendChild(poly);
-    const label = svgEl("text", {
-      x, y: y + 8, "text-anchor": "middle", class: "hex-emoji"
-    });
-    label.textContent = TERRAIN_EMOJI[terrain];
-    g.appendChild(label);
-    svg.appendChild(g);
+    svg.appendChild(terrainHexGroup(x, y, terrain, HEX_SIZE, defs, "hex-tile"));
   });
 
-  // Legal empty spots
+  // Legal empty spots (dashed highlight, clickable)
   legalSet.forEach(k => {
     if (state.board[k]) return;
     const { x, y } = positions[k];
@@ -81,6 +116,25 @@ function renderBoard(svg, state, legalSpots, onSpotClick) {
   });
 }
 
+// ---------- Card shape layout ----------
+// Canonical direction offsets (see hexgrid.js HEX_DIRS ordering) chosen so
+// each shape renders recognizably: Line = horizontal chain, Elbow = bent
+// chain, Triangle = tight mutually-touching cluster.
+const CARD_SHAPE_DIRS = {
+  line: { a: 0, c: 3 },    // pure left / pure right -> straight horizontal chain
+  elbow: { a: 0, c: 2 },   // right / up-left -> bent chain
+  triangle: { a: 0, c: 1 } // adjacent directions -> touching cluster
+};
+
+function cardHexPositions(shape, size = CARD_HEX_SIZE) {
+  const dirs = CARD_SHAPE_DIRS[shape];
+  const dA = HEX_DIRS[dirs.a], dC = HEX_DIRS[dirs.c];
+  const pivot = { x: 0, y: 0 };
+  const a = axialToPixel(dA.q, dA.r, size);
+  const c = axialToPixel(dC.q, dC.r, size);
+  return { pivot, a, c };
+}
+
 function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
   const card = CARDS_BY_ID[cardId];
   const div = document.createElement("div");
@@ -89,13 +143,36 @@ function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
     div.innerHTML = `<div class="nc-title">NATURE</div><div style="font-size:30px;padding:16px 0;">🂠</div>`;
     return div;
   }
-  const shapeRow = card.terrains.map(t => `<div class="nc-hex">${TERRAIN_EMOJI[t]}</div>`).join("");
-  div.innerHTML = `
-    <div class="nc-title">NATURE</div>
-    <div class="nc-shape-row">${shapeRow}</div>
+
+  const { pivot, a, c } = cardHexPositions(card.shape);
+  const pts = [a, pivot, c];
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const pad = CARD_HEX_SIZE + 4;
+  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+  const vbW = maxX - minX, vbH = maxY - minY;
+
+  const svg = svgEl("svg", { viewBox: `${minX} ${minY} ${vbW} ${vbH}`, width: "100%", height: "92" });
+  const defs = svgEl("defs", {});
+  svg.appendChild(defs);
+
+  // terrains = [end1, pivot, end2] for elbow/line; for triangle, order is
+  // just [a,b,c] (any assignment is visually equivalent since all 3 mutually
+  // touch and rotation/mirror is unrestricted).
+  const [tEnd1, tPivot, tEnd2] = card.terrains;
+  svg.appendChild(terrainHexGroup(a.x, a.y, tEnd1, CARD_HEX_SIZE, defs));
+  svg.appendChild(terrainHexGroup(pivot.x, pivot.y, tPivot, CARD_HEX_SIZE, defs));
+  svg.appendChild(terrainHexGroup(c.x, c.y, tEnd2, CARD_HEX_SIZE, defs));
+
+  div.innerHTML = `<div class="nc-title">NATURE</div>`;
+  div.appendChild(svg);
+  const foot = document.createElement("div");
+  foot.innerHTML = `
     <div class="nc-shapelabel">${SHAPE_LABELS[card.shape]}</div>
     <div class="nc-points">${card.points} pt${card.points > 1 ? "s" : ""}</div>
   `;
+  div.appendChild(foot);
+
   if (onClick) div.addEventListener("click", () => onClick(cardId));
   return div;
 }
@@ -103,7 +180,10 @@ function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
 function renderTileChip(terrain, { selected, disabled, onClick } = {}) {
   const div = document.createElement("div");
   div.className = "tile-chip" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
-  div.textContent = TERRAIN_EMOJI[terrain];
+  div.style.backgroundImage = `url("${TERRAIN_IMAGES[terrain]}")`;
+  div.style.backgroundSize = "cover";
+  div.style.backgroundPosition = "center";
+  if (!selected) div.style.borderColor = TERRAIN_COLORS[terrain];
   div.title = TERRAIN_LABELS[terrain];
   if (onClick && !disabled) div.addEventListener("click", () => onClick());
   return div;
@@ -112,12 +192,15 @@ function renderTileChip(terrain, { selected, disabled, onClick } = {}) {
 function renderMarketTile(terrain, { selected, onClick } = {}) {
   const div = document.createElement("div");
   div.className = "market-tile" + (selected ? " selected" : "");
-  div.textContent = TERRAIN_EMOJI[terrain];
+  div.style.backgroundImage = `url("${TERRAIN_IMAGES[terrain]}")`;
+  div.style.backgroundSize = "cover";
+  div.style.backgroundPosition = "center";
+  if (!selected) div.style.borderColor = TERRAIN_COLORS[terrain];
   div.title = TERRAIN_LABELS[terrain];
   if (onClick) div.addEventListener("click", () => onClick());
   return div;
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { axialToPixel, hexPoints, renderBoard, renderCard, renderTileChip, renderMarketTile };
+  module.exports = { axialToPixel, hexPoints, renderBoard, renderCard, renderTileChip, renderMarketTile, cardHexPositions };
 }
