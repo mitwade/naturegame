@@ -177,11 +177,18 @@ p { color: var(--text-dim); line-height: 1.5; }
 
 .panels-grid {
   display: grid;
-  grid-template-columns: 2fr 1.3fr;
+  grid-template-columns: 1.1fr 2fr 1.2fr;
   gap: 14px;
+  align-items: start;
 }
-@media (max-width: 900px) {
+.panel-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 1100px) {
+  .panels-grid { grid-template-columns: 1fr 1fr; }
+  .panel-board { grid-column: 1 / -1; order: -1; }
+}
+@media (max-width: 700px) {
   .panels-grid { grid-template-columns: 1fr; }
+  .panel-board { grid-column: auto; order: -1; }
 }
 
 .section-title {
@@ -192,29 +199,46 @@ p { color: var(--text-dim); line-height: 1.5; }
   margin-bottom: 8px;
 }
 
-.tile-tray { display: flex; gap: 8px; flex-wrap: wrap; }
-.tile-chip {
-  width: 46px; height: 52px;
-  border-radius: 8px;
-  background-color: var(--panel-2);
-  background-repeat: no-repeat;
-  border: 2px solid var(--border);
-  cursor: pointer;
-  position: relative;
-}
-.tile-chip.selected { border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(227,178,60,0.3); }
-.tile-chip.disabled { opacity: 0.35; cursor: not-allowed; }
+/* ---------- Distinct section colors (game screen) ----------
+   Each panel gets its own subtle background + border tint so sections
+   read as separate areas instead of blending into one wall of panels. */
+.panel-board .section-board   { background: #16261d; border-color: #2c4635; }
+.section-tilepool             { background: #15242c; border-color: #274152; }
+.section-market               { background: #2a2417; border-color: #4a3f22; }
+.section-otherpools           { background: #1c1c30; border-color: #35355a; }
+.section-log                  { background: #26182b; border-color: #45274d; }
+.section-bank                 { background: #2b2015; border-color: #4d3a1f; }
+.section-hand                 { background: #182a1e; border-color: #2c5138; }
 
-.market-tray, .bank-tray { display: flex; gap: 10px; flex-wrap: wrap; }
-.market-tile {
-  width: 50px; height: 56px;
-  border-radius: 8px;
-  background-color: var(--panel-2);
-  background-repeat: no-repeat;
-  border: 2px solid var(--border);
+.tile-tray { display: flex; gap: 6px; flex-wrap: wrap; }
+.market-tray, .bank-tray { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Hex tile chips â€” plain hexagon icons (SVG, clipped like the board tiles),
+   no rectangular background/border showing behind the hex. */
+.hex-chip {
+  display: inline-flex;
   cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  transition: transform 0.1s ease, filter 0.15s ease, opacity 0.15s ease;
 }
-.market-tile.selected { border-color: var(--accent); }
+.hex-chip svg { display: block; }
+.hex-chip:hover:not(.disabled) { transform: translateY(-3px); }
+.hex-chip.selected { filter: drop-shadow(0 0 5px var(--accent-2)) drop-shadow(0 0 1px var(--accent-2)); }
+.hex-chip.disabled { opacity: 0.35; cursor: not-allowed; }
+.market-hex-chip.selected { filter: drop-shadow(0 0 5px var(--accent)) drop-shadow(0 0 1px var(--accent)); }
+
+/* Other players' public tile pools */
+.other-pool-row { margin-bottom: 10px; }
+.other-pool-row:last-child { margin-bottom: 0; }
+.other-pool-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.other-pool-label .pts { color: var(--text-dim); }
+.other-pool-tray .hex-chip { cursor: default; }
+.other-pool-tray .hex-chip:hover { transform: none; }
 
 .nature-card {
   width: 112px;
