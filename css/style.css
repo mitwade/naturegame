@@ -213,7 +213,7 @@ p { color: var(--text-dim); line-height: 1.5; }
 .tile-tray { display: flex; gap: 6px; flex-wrap: wrap; }
 .market-tray, .bank-tray { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Hex tile chips â€” plain hexagon icons (SVG, clipped like the board tiles),
+/* Hex tile chips — plain hexagon icons (SVG, clipped like the board tiles),
    no rectangular background/border showing behind the hex. */
 .hex-chip {
   display: inline-flex;
