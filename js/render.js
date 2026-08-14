@@ -177,28 +177,39 @@ function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
   return div;
 }
 
+// Small standalone hex icon (used for pool/market/other-players' chips) —
+// same SVG clip-path technique as the board tiles, so there's no square
+// image bleeding through around the hexagon (no more "white border").
+const POOL_HEX_SIZE = 24;
+const MARKET_HEX_SIZE = 26;
+function terrainHexSvg(terrain, size) {
+  const pad = 3;
+  const svg = svgEl("svg", {
+    viewBox: `${-size - pad} ${-size - pad} ${2 * (size + pad)} ${2 * (size + pad)}`,
+    width: size * 2, height: size * 2
+  });
+  const defs = svgEl("defs", {});
+  svg.appendChild(defs);
+  svg.appendChild(terrainHexGroup(0, 0, terrain, size, defs));
+  return svg;
+}
+
 function renderTileChip(terrain, { selected, disabled, onClick } = {}) {
-  const div = document.createElement("div");
-  div.className = "tile-chip" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
-  div.style.backgroundImage = `url("${TERRAIN_IMAGES[terrain]}")`;
-  div.style.backgroundSize = "cover";
-  div.style.backgroundPosition = "center";
-  if (!selected) div.style.borderColor = TERRAIN_COLORS[terrain];
-  div.title = TERRAIN_LABELS[terrain];
-  if (onClick && !disabled) div.addEventListener("click", () => onClick());
-  return div;
+  const wrap = document.createElement("div");
+  wrap.className = "hex-chip" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+  wrap.appendChild(terrainHexSvg(terrain, POOL_HEX_SIZE));
+  wrap.title = TERRAIN_LABELS[terrain];
+  if (onClick && !disabled) wrap.addEventListener("click", () => onClick());
+  return wrap;
 }
 
 function renderMarketTile(terrain, { selected, onClick } = {}) {
-  const div = document.createElement("div");
-  div.className = "market-tile" + (selected ? " selected" : "");
-  div.style.backgroundImage = `url("${TERRAIN_IMAGES[terrain]}")`;
-  div.style.backgroundSize = "cover";
-  div.style.backgroundPosition = "center";
-  if (!selected) div.style.borderColor = TERRAIN_COLORS[terrain];
-  div.title = TERRAIN_LABELS[terrain];
-  if (onClick) div.addEventListener("click", () => onClick());
-  return div;
+  const wrap = document.createElement("div");
+  wrap.className = "hex-chip market-hex-chip" + (selected ? " selected" : "");
+  wrap.appendChild(terrainHexSvg(terrain, MARKET_HEX_SIZE));
+  wrap.title = TERRAIN_LABELS[terrain];
+  if (onClick) wrap.addEventListener("click", () => onClick());
+  return wrap;
 }
 
 if (typeof module !== "undefined") {
