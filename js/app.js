@@ -127,6 +127,11 @@ function openOnlineSetup() {
 document.getElementById("btn-online-back").addEventListener("click", () => showScreen("screen-menu"));
 
 document.getElementById("btn-online-create").addEventListener("click", async () => {
+  if (!isFirebaseConfigured()) {
+    document.getElementById("online-setup-error").textContent =
+      "Online play isn't configured yet — see README for the 5-minute Firebase setup.";
+    return;
+  }
   try {
     const name = document.getElementById("online-name").value.trim() || "Host";
     const { code, playerId } = await createOnlineGame(name);
@@ -138,6 +143,11 @@ document.getElementById("btn-online-create").addEventListener("click", async () 
 });
 
 document.getElementById("btn-online-join").addEventListener("click", async () => {
+  if (!isFirebaseConfigured()) {
+    document.getElementById("online-setup-error").textContent =
+      "Online play isn't configured yet — see README for the 5-minute Firebase setup.";
+    return;
+  }
   try {
     const name = document.getElementById("online-name").value.trim() || "Player";
     const code = document.getElementById("online-join-code").value.trim().toUpperCase();
@@ -247,8 +257,13 @@ function maybeRunBotTurn() {
   if (botTurnInFlight) return;
   botTurnInFlight = true;
   setTimeout(async () => {
-    await applyAction(state => { runBotTurn(state, state.currentPlayerIndex); });
+    // Release the flag *before* applying the action. applyAction (local
+    // modes) synchronously triggers afterLocalStateChange -> maybeRunBotTurn
+    // again once this bot's turn resolves, so the very next bot (e.g. a
+    // second/third bot in a row) needs to see botTurnInFlight === false at
+    // that point or its turn gets silently swallowed and the game freezes.
     botTurnInFlight = false;
+    await applyAction(state => { runBotTurn(state, state.currentPlayerIndex); });
   }, 700);
 }
 
@@ -376,6 +391,27 @@ function renderGame() {
   if (handOwner) {
     handOwner.hand.forEach(cardId => handEl.appendChild(renderCard(cardId, {})));
   }
+
+  // Other players' tile pools (public info — visible to everyone; only
+  // "Your Hand" of nature cards is private).
+  const othersEl = document.getElementById("other-pools");
+  othersEl.innerHTML = "";
+  STATE.players.forEach((p, i) => {
+    if (i === me) return; // skip my own pool, already shown above
+    const row = document.createElement("div");
+    row.className = "other-pool-row";
+    const label = document.createElement("div");
+    label.className = "other-pool-label";
+    label.innerHTML = `${p.isBot ? "🤖" : "🧑"} ${p.name} <span class="pts">(${p.pool.length}/7)</span>`;
+    row.appendChild(label);
+    const tray = document.createElement("div");
+    tray.className = "tile-tray other-pool-tray";
+    p.pool.forEach(terrain => {
+      tray.appendChild(renderTileChip(terrain, { disabled: true }));
+    });
+    row.appendChild(tray);
+    othersEl.appendChild(row);
+  });
 
   // Log
   const logEl = document.getElementById("log-box");
