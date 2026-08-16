@@ -27,6 +27,7 @@ let passOverlayShownFor = null; // player index we've already shown the overlay 
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
   document.getElementById(id).classList.remove("hidden");
+  if (id === "screen-menu") renderContinueSection();
 }
 
 function toast(msg) {
@@ -37,12 +38,94 @@ function toast(msg) {
   setTimeout(() => el.remove(), 2200);
 }
 
+// ---------- Continue / resume saved games ----------
+function describeLocalSave(save) {
+  if (!save || !save.state) return "";
+  const s = save.state;
+  const cur = s.players[s.currentPlayerIndex];
+  return `Round ${s.round} of 3${cur ? " · " + cur.name + "'s turn" : ""}`;
+}
+
+function renderContinueSection() {
+  const wrap = document.getElementById("continue-section");
+  if (!wrap) return;
+  const soloSave = loadLocalSave("solo");
+  const passSave = loadLocalSave("pass");
+  const onlineSave = loadOnlineSave();
+  const items = [];
+  if (soloSave) items.push({ mode: "solo", icon: "🤖", title: "Solo vs Bots", desc: describeLocalSave(soloSave) });
+  if (passSave) items.push({ mode: "pass", icon: "📱", title: "Pass & Play", desc: describeLocalSave(passSave) });
+  if (onlineSave) items.push({ mode: "online", icon: "🌐", title: "Online Game", desc: `Room code ${onlineSave.code}` });
+
+  if (!items.length) { wrap.classList.add("hidden"); wrap.innerHTML = ""; return; }
+  wrap.classList.remove("hidden");
+  wrap.innerHTML = `<h3 class="continue-heading">Continue Playing</h3><div class="continue-grid">` +
+    items.map(it => `
+      <div class="continue-card" data-resume="${it.mode}">
+        <div class="continue-icon">${it.icon}</div>
+        <div class="continue-text"><strong>${it.title}</strong><div class="continue-desc">${it.desc}</div></div>
+        <button class="continue-discard" data-discard="${it.mode}" title="Discard saved game">✕</button>
+      </div>`).join("") +
+    `</div>`;
+
+  wrap.querySelectorAll("[data-resume]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("[data-discard]")) return;
+      resumeSavedGame(el.dataset.resume);
+    });
+  });
+  wrap.querySelectorAll("[data-discard]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mode = btn.dataset.discard;
+      if (mode === "online") clearOnlineSave(); else clearLocalSave(mode);
+      renderContinueSection();
+      toast("Saved game discarded.");
+    });
+  });
+}
+
+async function resumeSavedGame(mode) {
+  if (mode === "solo" || mode === "pass") {
+    const save = loadLocalSave(mode);
+    if (!save) return;
+    MODE = mode;
+    STATE = save.state;
+    LOCAL_SETUP_PLAYERS = save.setupPlayers || [];
+    startGameScreen();
+  } else if (mode === "online") {
+    const save = loadOnlineSave();
+    if (!save) return;
+    if (!isFirebaseConfigured()) { toast("Online play isn't configured on this site."); return; }
+    try {
+      const { playerId } = await joinOnlineGame(save.code, save.name || "Player");
+      ONLINE_CODE = save.code; ONLINE_PLAYER_ID = playerId;
+      MODE = "online";
+      enterOnlineLobby();
+    } catch (e) {
+      toast(e.message || String(e));
+      clearOnlineSave();
+      renderContinueSection();
+    }
+  }
+}
+
 // ---------- Menu ----------
 document.querySelectorAll(".mode-card").forEach(card => {
   card.addEventListener("click", () => {
     const mode = card.dataset.mode;
-    if (mode === "solo" || mode === "pass") openLocalSetup(mode);
-    else openOnlineSetup();
+    if (mode === "solo" || mode === "pass") {
+      const existing = loadLocalSave(mode);
+      if (existing) {
+        const label = mode === "solo" ? "Solo vs Bots" : "Pass & Play";
+        const ok = confirm(`You have a ${label} game in progress. Starting a new game will discard it. Continue?`);
+        if (!ok) return;
+        clearLocalSave(mode);
+      }
+      openLocalSetup(mode);
+    } else {
+      openOnlineSetup();
+    }
   });
 });
 
@@ -136,6 +219,7 @@ document.getElementById("btn-online-create").addEventListener("click", async () 
     const name = document.getElementById("online-name").value.trim() || "Host";
     const { code, playerId } = await createOnlineGame(name);
     ONLINE_CODE = code; ONLINE_PLAYER_ID = playerId;
+    saveOnlineJoin(code, name);
     enterOnlineLobby();
   } catch (e) {
     document.getElementById("online-setup-error").textContent = e.message || String(e);
@@ -154,6 +238,7 @@ document.getElementById("btn-online-join").addEventListener("click", async () =>
     if (!code) return;
     const { playerId } = await joinOnlineGame(code, name);
     ONLINE_CODE = code; ONLINE_PLAYER_ID = playerId;
+    saveOnlineJoin(code, name);
     enterOnlineLobby();
   } catch (e) {
     document.getElementById("online-setup-error").textContent = e.message || String(e);
@@ -184,7 +269,7 @@ function onOnlineDocUpdate(data) {
       // ensure we're on the game screen
     }
     startGameScreen(true);
-    if (data.status === "finished") showGameOver();
+    if (data.status === "finished") { clearOnlineSave(); showGameOver(); }
     maybeRunBotTurn();
   }
 }
@@ -205,6 +290,7 @@ document.getElementById("btn-lobby-start").addEventListener("click", async () =>
 document.getElementById("btn-lobby-leave").addEventListener("click", () => {
   if (ONLINE_UNSUB) ONLINE_UNSUB();
   if (ONLINE_CODE && ONLINE_PLAYER_ID) removeLobbyPlayer(ONLINE_CODE, ONLINE_PLAYER_ID).catch(() => {});
+  clearOnlineSave();
   ONLINE_CODE = null; ONLINE_PLAYER_ID = null;
   showScreen("screen-menu");
 });
@@ -225,6 +311,9 @@ async function applyAction(mutator) {
 }
 
 function afterLocalStateChange() {
+  if (MODE === "solo" || MODE === "pass") {
+    if (STATE.gameOver) clearLocalSave(MODE); else saveLocalGame(MODE);
+  }
   if (STATE.gameOver) { showGameOver(); return; }
   if (MODE === "pass") maybePassDeviceOverlay();
   maybeRunBotTurn();
@@ -278,6 +367,71 @@ function maybePassDeviceOverlay() {
 document.getElementById("btn-pass-ready").addEventListener("click", () => {
   document.getElementById("pass-device-overlay").classList.add("hidden");
 });
+
+// ---------- Modal (game menu + rulebook) ----------
+function openModal(html) {
+  document.getElementById("modal-box").innerHTML = html;
+  document.getElementById("modal-backdrop").classList.remove("hidden");
+}
+function closeModal() {
+  document.getElementById("modal-backdrop").classList.add("hidden");
+  document.getElementById("modal-box").innerHTML = "";
+}
+document.getElementById("modal-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "modal-backdrop") closeModal();
+});
+
+function openRulesModal() {
+  openModal(`
+    <div class="rules-modal">
+      <div class="rules-modal-head">
+        <h2>📖 Rulebook</h2>
+        <button class="secondary small" id="modal-close-rules">✕ Close</button>
+      </div>
+      <div class="rules-scroll">${RULEBOOK_HTML}</div>
+    </div>
+  `);
+  document.getElementById("modal-close-rules").addEventListener("click", closeModal);
+}
+
+function openGameMenu() {
+  const inGame = !!STATE;
+  openModal(`
+    <div class="game-menu-modal">
+      <h3>Menu</h3>
+      <div class="menu-modal-actions">
+        <button id="modal-btn-resume" class="secondary">▶ Resume playing</button>
+        <button id="modal-btn-rules" class="secondary">📖 Rulebook</button>
+        ${inGame ? `<button id="modal-btn-save-exit" class="secondary">💾 Save &amp; exit to menu</button>` : ""}
+        ${inGame ? `<button id="modal-btn-leave" class="danger-btn">🚪 Leave game (discard progress)</button>` : ""}
+      </div>
+    </div>
+  `);
+  document.getElementById("modal-btn-resume").addEventListener("click", closeModal);
+  document.getElementById("modal-btn-rules").addEventListener("click", openRulesModal);
+  const saveExitBtn = document.getElementById("modal-btn-save-exit");
+  if (saveExitBtn) saveExitBtn.addEventListener("click", () => {
+    if (MODE === "solo" || MODE === "pass") saveLocalGame(MODE);
+    if (ONLINE_UNSUB) { ONLINE_UNSUB(); ONLINE_UNSUB = null; }
+    closeModal();
+    toast("Saved — resume it anytime from the main menu.");
+    showScreen("screen-menu");
+  });
+  const leaveBtn = document.getElementById("modal-btn-leave");
+  if (leaveBtn) leaveBtn.addEventListener("click", () => {
+    const ok = confirm("Leave this game and discard your saved progress? This can't be undone.");
+    if (!ok) return;
+    if (MODE === "solo" || MODE === "pass") clearLocalSave(MODE);
+    if (MODE === "online") clearOnlineSave();
+    if (ONLINE_UNSUB) { ONLINE_UNSUB(); ONLINE_UNSUB = null; }
+    MODE = null; STATE = null; ONLINE_CODE = null; ONLINE_PLAYER_ID = null;
+    closeModal();
+    showScreen("screen-menu");
+  });
+}
+
+document.getElementById("btn-game-menu")?.addEventListener("click", openGameMenu);
+document.getElementById("btn-menu-rules")?.addEventListener("click", openRulesModal);
 
 // ---------- Game screen ----------
 function startGameScreen(fromOnline) {

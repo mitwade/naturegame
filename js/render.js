@@ -1,7 +1,7 @@
 // Rendering helpers: hex board SVG + card/tile widgets, using real terrain
 // artwork (flat-top hexagons) clipped via SVG <clipPath>.
 
-const HEX_SIZE = 34; // pixel "radius" (center-to-vertex) of each board hex
+const HEX_SIZE = 42; // pixel "radius" (center-to-vertex) of each board hex
 const CARD_HEX_SIZE = 19; // radius for the small hex icons on Nature Cards
 
 // --- Pointy-top axial <-> pixel ---
@@ -58,12 +58,19 @@ function terrainHexGroup(cx, cy, terrain, size, defs, extraClass) {
     g.appendChild(label);
   });
   g.appendChild(img);
+  // Inset the outline so its stroke sits entirely inside this hex's own
+  // boundary instead of being centered on the shared edge — a centered
+  // stroke bleeds half its width into the neighboring tile, and whichever
+  // tile is drawn later paints over the earlier tile's edge color, so only
+  // one color ever showed at a shared border. Insetting means both tiles'
+  // colors meet exactly at the edge instead of one overwriting the other.
+  const strokeWidth = Math.max(2.5, size * 0.11);
   const outline = svgEl("polygon", {
-    points: hexPoints(0, 0, size),
+    points: hexPoints(0, 0, size - strokeWidth / 2),
     class: "hex-outline",
     fill: "none",
     stroke: TERRAIN_COLORS[terrain],
-    "stroke-width": Math.max(2.5, size * 0.11)
+    "stroke-width": strokeWidth
   });
   g.appendChild(outline);
   return g;

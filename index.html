@@ -9,24 +9,47 @@
 <body>
 
 <!-- ============ MAIN MENU ============ -->
-<div id="screen-menu" class="screen">
-  <h1 class="menu-title">🌍 NATURE</h1>
-  <p class="menu-subtitle">Build a shared world. Score is yours alone.</p>
+<div id="screen-menu" class="screen menu-screen">
+  <div class="menu-hero">
+    <div class="menu-hex-scatter" aria-hidden="true">
+      <img src="assets/terrain/forest.png" class="scatter-hex sh-1" />
+      <img src="assets/terrain/ocean.png" class="scatter-hex sh-2" />
+      <img src="assets/terrain/mountain.png" class="scatter-hex sh-3" />
+      <img src="assets/terrain/volcano.png" class="scatter-hex sh-4" />
+      <img src="assets/terrain/meadow.png" class="scatter-hex sh-5" />
+      <img src="assets/terrain/glacier.png" class="scatter-hex sh-6" />
+      <img src="assets/terrain/pond.png" class="scatter-hex sh-7" />
+      <img src="assets/terrain/desert.png" class="scatter-hex sh-8" />
+    </div>
+    <div class="menu-hero-content">
+      <p class="menu-kicker">A tabletop world-building game</p>
+      <h1 class="menu-title">NATURE</h1>
+      <p class="menu-subtitle">Build a shared world. Score is yours alone.</p>
+      <button class="ghost-link" id="btn-menu-rules">📖 Read the rulebook</button>
+    </div>
+  </div>
+
+  <div id="continue-section" class="hidden"></div>
+
   <div class="mode-grid">
     <div class="mode-card" data-mode="solo">
-      <h3>🤖 Solo vs Bots</h3>
+      <div class="mode-card-icon">🤖</div>
+      <h3>Solo vs Bots</h3>
       <p>Play against 1–5 computer opponents on this device.</p>
     </div>
     <div class="mode-card" data-mode="pass">
-      <h3>📱 Pass & Play</h3>
+      <div class="mode-card-icon">📱</div>
+      <h3>Pass &amp; Play</h3>
       <p>2–6 players share this device, passing it each turn. Bots optional.</p>
     </div>
     <div class="mode-card" data-mode="online">
-      <h3>🌐 Play Online</h3>
+      <div class="mode-card-icon">🌐</div>
+      <h3>Play Online</h3>
       <p>Create or join a game code and play with others on their own devices. Bots optional.</p>
     </div>
   </div>
-  <div class="card-panel gap-top" style="margin-top:24px;">
+
+  <div class="card-panel how-to-panel gap-top" style="margin-top:24px;">
     <h3>How to play</h3>
     <p>Place hexagonal terrain tiles onto the shared board to complete geometric
     patterns (Triangle = 1pt, Elbow = 2pt, Straight Line = 3pt) shown on your
@@ -96,17 +119,13 @@
       <span class="turn-status" id="game-turn-label"></span>
     </div>
     <div class="players-inline" id="players-inline"></div>
+    <button id="btn-game-menu" class="secondary small" title="Menu">☰ Menu</button>
   </div>
 
   <div id="table-viewport">
     <div id="table-surface">
       <div class="panels-grid">
         <div class="panel-col panel-left">
-          <div class="card-panel section-tilepool">
-            <div class="section-title">Your Tile Pool <span id="pool-count"></span></div>
-            <div class="tile-tray" id="tile-tray"></div>
-            <p id="placement-hint" style="font-size:12px; margin-top:6px;">Select a tile, then click a highlighted hex to place it.</p>
-          </div>
           <div class="card-panel section-market">
             <div class="section-title">Tile Market (Draw Tiles)</div>
             <div class="market-tray" id="market-tray"></div>
@@ -115,12 +134,10 @@
               <span id="draw-tiles-selected-label" style="font-size:12px; color:var(--text-dim);"></span>
             </div>
           </div>
-        </div>
-
-        <div class="panel-col panel-board">
-          <div class="card-panel section-board">
-            <div class="section-title">Shared Board</div>
-            <div id="board-scroll"><svg id="board-svg"></svg></div>
+          <div class="card-panel section-tilepool">
+            <div class="section-title">Your Tile Pool <span id="pool-count"></span></div>
+            <div class="tile-tray" id="tile-tray"></div>
+            <p id="placement-hint" style="font-size:12px; margin-top:6px;">Select a tile, then click a highlighted hex to place it.</p>
           </div>
           <div class="card-panel section-otherpools">
             <div class="section-title">Other Players' Tile Pools <span style="text-transform:none; letter-spacing:0;">(visible to everyone)</span></div>
@@ -128,14 +145,21 @@
           </div>
         </div>
 
+        <div class="panel-col panel-board">
+          <div class="card-panel section-bank">
+            <div class="section-title">Card Bank (anyone can claim)</div>
+            <div class="bank-row" id="bank-row"></div>
+          </div>
+          <div class="card-panel section-board">
+            <div class="section-title">Shared Board</div>
+            <div id="board-scroll"><svg id="board-svg"></svg></div>
+          </div>
+        </div>
+
         <div class="panel-col panel-right">
           <div class="card-panel section-log">
             <div class="section-title">Log</div>
             <div class="log-box" id="log-box"></div>
-          </div>
-          <div class="card-panel section-bank">
-            <div class="section-title">Card Bank (anyone can claim)</div>
-            <div class="bank-row" id="bank-row"></div>
           </div>
           <div class="card-panel section-hand">
             <div class="section-title">Your Hand (private)</div>
@@ -199,6 +223,8 @@
 <script src="js/engine.js"></script>
 <script src="js/bot.js"></script>
 <script src="js/render.js"></script>
+<script src="js/saves.js"></script>
+<script src="js/rulebook.js"></script>
 
 <!-- Firebase (only used for Online mode; safe to load even if unused) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
