@@ -136,7 +136,7 @@ async function resumeSavedGame(mode) {
 }
 
 // ---------- Menu ----------
-document.querySelectorAll(".mode-card").forEach(card => {
+document.querySelectorAll("#screen-menu .mode-card").forEach(card => {
   card.addEventListener("click", () => {
     const mode = card.dataset.mode;
     if (mode === "solo" || mode === "pass") {
@@ -156,18 +156,28 @@ document.querySelectorAll(".mode-card").forEach(card => {
 
 document.getElementById("btn-menu-rules")?.addEventListener("click", openRulesModal);
 document.getElementById("btn-menu-records")?.addEventListener("click", () => {
+  recordsTab = "yours";
+  document.querySelectorAll(".records-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "yours"));
   renderRecordsScreen();
   showScreen("screen-records");
 });
 document.getElementById("btn-records-back")?.addEventListener("click", () => showScreen("screen-menu"));
+document.querySelectorAll(".records-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    recordsTab = btn.dataset.tab;
+    document.querySelectorAll(".records-tab").forEach(b => b.classList.toggle("active", b === btn));
+    renderRecordsScreen();
+  });
+});
 
-function renderRecordsScreen() {
-  const records = loadGameRecords().slice().reverse(); // newest first
-  const stats = computeGameStats();
+let recordsTab = "yours";
 
+function renderRecordsSummaryAndList(records, opts = {}) {
+  const stats = computeStatsFromRecords(records);
   const summaryEl = document.getElementById("records-summary");
   if (!stats.length) {
-    summaryEl.innerHTML = "";
+    summaryEl.innerHTML = opts.emptyMessage
+      ? `<p style="color:var(--text-dim);">${opts.emptyMessage}</p>` : "";
   } else {
     summaryEl.innerHTML = `<div class="records-stat-grid">` + stats.map(s => `
       <div class="record-stat-card">
@@ -182,7 +192,7 @@ function renderRecordsScreen() {
 
   const listEl = document.getElementById("records-list");
   if (!records.length) {
-    listEl.innerHTML = `<p style="color:var(--text-dim);">No games recorded yet — finish a game to start building records!</p>`;
+    listEl.innerHTML = `<p style="color:var(--text-dim);">${opts.emptyMessage || "No games recorded yet."}</p>`;
   } else {
     listEl.innerHTML = records.map(r => {
       const date = new Date(r.timestamp).toLocaleString();
@@ -195,6 +205,37 @@ function renderRecordsScreen() {
         <div class="record-row-players">${playersHtml}</div>
       </div>`;
     }).join("");
+  }
+}
+
+async function renderRecordsScreen() {
+  const listEl = document.getElementById("records-list");
+  const summaryEl = document.getElementById("records-summary");
+  const titleEl = document.getElementById("records-list-title");
+
+  if (recordsTab === "yours") {
+    titleEl.textContent = "Your Games";
+    const records = loadGameRecords().slice().reverse();
+    renderRecordsSummaryAndList(records, { emptyMessage: "No games recorded yet — finish a game to start building your records!" });
+    return;
+  }
+
+  titleEl.textContent = "World Games";
+  if (!isFirebaseConfigured()) {
+    summaryEl.innerHTML = "";
+    listEl.innerHTML = `<p style="color:var(--text-dim);">World records need online play configured on this site (see README) — that's what powers the shared record book.</p>`;
+    return;
+  }
+  summaryEl.innerHTML = "";
+  listEl.innerHTML = `<p style="color:var(--text-dim);">Loading world records…</p>`;
+  const records = await fetchWorldRecords();
+  records.sort((a, b) => b.timestamp - a.timestamp);
+  renderRecordsSummaryAndList(records, {
+    emptyMessage: "No world records yet — be the first to finish a game!"
+  });
+  if (records.length === WORLD_RECORDS_FETCH_LIMIT) {
+    document.getElementById("records-summary").insertAdjacentHTML("beforeend",
+      `<p style="color:var(--text-dim); font-size:12px; margin-top:6px;">Showing the most recent ${WORLD_RECORDS_FETCH_LIMIT} games worldwide.</p>`);
   }
 }
 

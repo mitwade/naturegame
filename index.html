@@ -91,21 +91,40 @@
 </div>
 
 <!-- ============ ONLINE SETUP ============ -->
-<div id="screen-online-setup" class="screen hidden">
-  <h2>Play Online</h2>
+<div id="screen-online-setup" class="screen menu-screen hidden">
+  <div class="menu-hero small-hero">
+    <div class="menu-hex-scatter" aria-hidden="true">
+      <img src="assets/terrain/ocean.png" class="scatter-hex sh-1" />
+      <img src="assets/terrain/forest.png" class="scatter-hex sh-2" />
+      <img src="assets/terrain/desert.png" class="scatter-hex sh-3" />
+      <img src="assets/terrain/mountain.png" class="scatter-hex sh-4" />
+      <img src="assets/terrain/glacier.png" class="scatter-hex sh-5" />
+      <img src="assets/terrain/meadow.png" class="scatter-hex sh-6" />
+    </div>
+    <div class="menu-hero-content">
+      <p class="menu-kicker">Multiplayer</p>
+      <h1 class="menu-title" style="font-size:38px;">Play Online</h1>
+      <p class="menu-subtitle">Create a room or join one with a code.</p>
+    </div>
+  </div>
   <div class="card-panel">
     <label>Your name</label><br/>
     <input id="online-name" type="text" placeholder="Your name" value="Player" />
   </div>
-  <div class="card-panel">
-    <h3>Create a new game</h3>
-    <p>Get a short code to share with friends.</p>
-    <button id="btn-online-create">Create Game</button>
-  </div>
-  <div class="card-panel">
-    <h3>Join a game</h3>
-    <input id="online-join-code" type="text" placeholder="Enter code" maxlength="5" style="text-transform:uppercase; width:120px;" />
-    <button id="btn-online-join">Join</button>
+  <div class="mode-grid">
+    <div class="mode-card">
+      <div class="mode-card-icon">🆕</div>
+      <h3>Create a new game</h3>
+      <p>Get a short code to share with friends.</p>
+      <button id="btn-online-create" class="gap-top">Create Game</button>
+    </div>
+    <div class="mode-card">
+      <div class="mode-card-icon">🔑</div>
+      <h3>Join a game</h3>
+      <p>Enter the code someone shared with you.</p>
+      <input id="online-join-code" type="text" placeholder="Enter code" maxlength="5" style="text-transform:uppercase; width:120px;" />
+      <button id="btn-online-join" class="gap-top">Join</button>
+    </div>
   </div>
   <div id="online-setup-error" style="color:#e08383;"></div>
   <button class="secondary gap-top" id="btn-online-back">← Back</button>
@@ -146,7 +165,7 @@
             <div class="section-title">Tile Market (Draw Tiles)</div>
             <div class="market-tray" id="market-tray"></div>
             <div class="row gap-top">
-              <button id="btn-draw-tiles-draw" class="secondary small">Draw from pile instead</button>
+              <button id="btn-draw-tiles-draw" class="draw-pile-btn">🎴 Draw from pile instead</button>
               <span id="draw-tiles-selected-label" style="font-size:12px; color:var(--text-dim);"></span>
             </div>
           </div>
@@ -189,7 +208,7 @@
       <button id="btn-zoom-in" class="secondary small" title="Zoom in">+</button>
       <button id="btn-zoom-reset" class="secondary small" title="Reset view">⤾</button>
       <button id="btn-zoom-out" class="secondary small" title="Zoom out">−</button>
-      <span class="zoom-hint">Drag to pan · Scroll to zoom</span>
+      <span class="zoom-hint">Scroll to move around · use +/− to zoom</span>
     </div>
   </div>
 
@@ -201,9 +220,9 @@
     <button id="btn-action-draw-tiles">Draw Tiles</button>
     <button id="btn-action-confirm-draw-tiles" class="hidden">Confirm Tile Draw</button>
     <button id="btn-undo" class="secondary hidden" title="Undo your last move">↩ Undo Last Move</button>
+    <button id="btn-end-turn" class="secondary" disabled>End Turn</button>
     <div class="spacer"></div>
     <span class="turn-status" id="action-status"></span>
-    <button id="btn-end-turn" class="secondary" disabled>End Turn</button>
   </div>
 </div>
 
@@ -252,10 +271,13 @@
 <!-- ============ GAME RECORDS ============ -->
 <div id="screen-records" class="screen hidden">
   <h2>🏆 Game Records</h2>
-  <p style="margin-top:-8px;">Every completed game played on this browser, plus stats broken down by game type and player count.</p>
+  <div class="records-tabs">
+    <button class="records-tab active" id="tab-records-yours" data-tab="yours">Your Game Records</button>
+    <button class="records-tab" id="tab-records-world" data-tab="world">World Game Records</button>
+  </div>
   <div id="records-summary" class="records-summary"></div>
   <div class="card-panel">
-    <h3>All Games</h3>
+    <h3 id="records-list-title">Your Games</h3>
     <div id="records-list"></div>
   </div>
   <button class="secondary" id="btn-records-back">← Back</button>

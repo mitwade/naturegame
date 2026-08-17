@@ -287,19 +287,16 @@ p { color: var(--text-dim); line-height: 1.5; }
   position: relative;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  cursor: grab;
-  touch-action: none;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
   background:
     radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.5) 100%),
     repeating-linear-gradient(97deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 2px, transparent 2px, transparent 5px),
     repeating-linear-gradient(90deg, #6b4a2c 0px, #6b4a2c 46px, #63432a 46px, #63432a 92px),
     linear-gradient(150deg, #6b4a2c, #4c3319);
 }
-#table-viewport.dragging { cursor: grabbing; }
 
 #table-surface {
-  transform-origin: 0 0;
   width: 1600px;
   max-width: none;
   margin: 32px auto 110px;
@@ -440,6 +437,15 @@ p { color: var(--text-dim); line-height: 1.5; }
     0 8px 16px rgba(0,0,0,0.45);
 }
 .section-market { background: linear-gradient(160deg, #4a3f22, #302811); border-color: #201a0a; }
+
+.draw-pile-btn {
+  background: linear-gradient(160deg, #e3b23c, #b8842a);
+  color: #241608;
+  font-weight: 700;
+  border: 2px solid #f0cf7a;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.draw-pile-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
 .section-bank { background: linear-gradient(160deg, #3f2f4a, #261c30); border-color: #180f20; }
 
 .section-otherpools {
@@ -671,6 +677,21 @@ p { color: var(--text-dim); line-height: 1.5; }
 .how-to-panel .final-scores-table tr.winner td { color: #7a5216; font-weight: 700; }
 
 /* ---------- Game Records screen ---------- */
+/* ---------- Game Records screen ---------- */
+.records-tabs { display: flex; gap: 8px; margin: 10px 0 16px; }
+.records-tab {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.records-tab.active {
+  background: var(--accent-2);
+  color: #241608;
+  border-color: var(--accent-2);
+}
 .records-stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

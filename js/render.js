@@ -124,13 +124,15 @@ function renderBoard(svg, state, legalSpots, onSpotClick) {
 }
 
 // ---------- Card shape layout ----------
-// Canonical direction offsets (see hexgrid.js HEX_DIRS ordering) chosen so
-// each shape renders recognizably: Line = horizontal chain, Elbow = bent
-// chain, Triangle = tight mutually-touching cluster.
+// Canonical direction offsets (see hexgrid.js HEX_DIRS ordering). Chosen so
+// each shape's 3-hex footprint has roughly the same bounding box, so all
+// three shapes render at the same hex size (see CARD_SCALE below) instead
+// of the old horizontal "line" layout — which was much wider than it was
+// tall — getting scaled down harder to fit than the compact triangle.
 const CARD_SHAPE_DIRS = {
-  line: { a: 0, c: 3 },    // pure left / pure right -> straight horizontal chain
-  elbow: { a: 0, c: 2 },   // right / up-left -> bent chain
-  triangle: { a: 0, c: 1 } // adjacent directions -> touching cluster
+  line: { a: 1, c: 4 },    // diagonal bottom-left -> top-right straight chain
+  elbow: { a: 2, c: 4 },   // bent chain
+  triangle: { a: 0, c: 1 } // tight mutually-touching cluster
 };
 
 function cardHexPositions(shape, size = CARD_HEX_SIZE) {
@@ -142,6 +144,28 @@ function cardHexPositions(shape, size = CARD_HEX_SIZE) {
   return { pivot, a, c };
 }
 
+function cardShapeBBox(shape) {
+  const { pivot, a, c } = cardHexPositions(shape);
+  const pts = [a, pivot, c];
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const pad = CARD_HEX_SIZE + 4;
+  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+  return { minX, minY, w: maxX - minX, h: maxY - minY };
+}
+
+// Available content box inside a card (card is 112px wide with 6px padding
+// each side -> ~100px content width; height is free to grow a bit).
+const CARD_CONTENT_WIDTH = 100;
+const CARD_CONTENT_MAX_HEIGHT = 132;
+// Triangle currently looks right-sized, so it sets the ceiling: every shape
+// uses the SAME pixels-per-unit scale (never bigger than triangle's), just
+// clamped down further only if a shape's own bounding box wouldn't fit.
+const CARD_SCALE = (() => {
+  const b = cardShapeBBox("triangle");
+  return Math.min(CARD_CONTENT_WIDTH / b.w, CARD_CONTENT_MAX_HEIGHT / b.h);
+})();
+
 function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
   const card = CARDS_BY_ID[cardId];
   const div = document.createElement("div");
@@ -152,14 +176,11 @@ function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
   }
 
   const { pivot, a, c } = cardHexPositions(card.shape);
-  const pts = [a, pivot, c];
-  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
-  const pad = CARD_HEX_SIZE + 4;
-  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
-  const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
-  const vbW = maxX - minX, vbH = maxY - minY;
+  const bbox = cardShapeBBox(card.shape);
+  const scale = Math.min(CARD_SCALE, CARD_CONTENT_WIDTH / bbox.w, CARD_CONTENT_MAX_HEIGHT / bbox.h);
+  const pxW = bbox.w * scale, pxH = bbox.h * scale;
 
-  const svg = svgEl("svg", { viewBox: `${minX} ${minY} ${vbW} ${vbH}`, width: "100%", height: "92" });
+  const svg = svgEl("svg", { viewBox: `${bbox.minX} ${bbox.minY} ${bbox.w} ${bbox.h}`, width: pxW, height: pxH });
   const defs = svgEl("defs", {});
   svg.appendChild(defs);
 

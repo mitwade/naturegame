@@ -2,6 +2,8 @@
 // has played on), stored in localStorage. Used for the "Game Records" screen.
 
 const GAME_RECORDS_KEY = "nature_game_records";
+const WORLD_RECORDS_COLLECTION = "nature_game_records";
+const WORLD_RECORDS_FETCH_LIMIT = 300;
 const MODE_LABELS = { solo: "Solo vs Bots", pass: "Pass & Play", online: "Online" };
 
 function loadGameRecords() {
@@ -24,12 +26,14 @@ function saveGameRecords(records) {
 
 // Records the result of a finished game exactly once (idempotent on
 // state.id, since online mode's Firestore listener may fire the "finished"
-// update more than once).
+// update more than once). Saves to this browser's local history AND — if
+// online play is configured — to a shared "world" collection so every
+// completed game (from anyone, any device) shows up on the World tab.
 function recordGameResult(state, mode) {
   if (!state || !state.finalScores) return;
   const records = loadGameRecords();
   if (records.some(r => r.gameId === state.id)) return;
-  records.push({
+  const record = {
     gameId: state.id,
     mode: mode || state.mode || "local",
     timestamp: Date.now(),
@@ -39,14 +43,48 @@ function recordGameResult(state, mode) {
       points: s.points,
       cardsCompleted: s.cardsCompleted
     }))
-  });
+  };
+  records.push(record);
   saveGameRecords(records);
+  submitWorldRecord(record);
 }
 
-// Groups all recorded games by (mode, playerCount) and computes the stats
-// requested for the Game Records screen.
-function computeGameStats() {
-  const records = loadGameRecords();
+// Fire-and-forget write to the shared world collection. Never blocks or
+// breaks gameplay if it fails (offline, Firestore not configured, etc.) —
+// world records are a nice-to-have, not required for the game to work.
+async function submitWorldRecord(record) {
+  if (typeof isFirebaseConfigured !== "function" || !isFirebaseConfigured()) return;
+  try {
+    const db = getFirestore();
+    await db.collection(WORLD_RECORDS_COLLECTION).doc(record.gameId).set(record);
+  } catch (e) {
+    console.warn("Could not submit world record:", e);
+  }
+}
+
+// Pulls the most recent N games from the shared world collection. World
+// stats are computed from this sample (not literally every game ever, for
+// a client-only app without server-side aggregation) — recent-first, so
+// the sample is always the freshest slice of activity.
+async function fetchWorldRecords() {
+  if (typeof isFirebaseConfigured !== "function" || !isFirebaseConfigured()) return [];
+  try {
+    const db = getFirestore();
+    const snap = await db.collection(WORLD_RECORDS_COLLECTION)
+      .orderBy("timestamp", "desc")
+      .limit(WORLD_RECORDS_FETCH_LIMIT)
+      .get();
+    return snap.docs.map(d => d.data());
+  } catch (e) {
+    console.warn("Could not fetch world records:", e);
+    return [];
+  }
+}
+
+// Groups a given list of records by (mode, playerCount) and computes the
+// stats shown on the Game Records screen. Works for either the local
+// history or a fetched world sample.
+function computeStatsFromRecords(records) {
   const groups = {};
   records.forEach(r => {
     const k = r.mode + "|" + r.playerCount;
@@ -68,4 +106,9 @@ function computeGameStats() {
       avgCards: g.cardCounts.reduce((a, b) => a + b, 0) / g.cardCounts.length
     }))
     .sort((a, b) => (a.mode === b.mode ? a.playerCount - b.playerCount : a.mode.localeCompare(b.mode)));
+}
+
+// Convenience wrapper for the local ("Yours") tab.
+function computeGameStats() {
+  return computeStatsFromRecords(loadGameRecords());
 }
