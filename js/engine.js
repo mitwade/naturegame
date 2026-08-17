@@ -44,6 +44,7 @@ function createGame(playerConfigs, options = {}) {
     pool: [tileBag.pop(), tileBag.pop(), tileBag.pop()],
     score: [],
     roundCompletedCount: 0,
+    completedByRound: [],
     turnsThisRound: 0
   }));
 
@@ -319,6 +320,7 @@ function doRoundCleanup(state) {
   logMsg(state, `--- Round ${state.round} ends ---`);
   // Score is already tallied via claim; just archive & reset pools/hands.
   state.players.forEach(p => {
+    p.completedByRound[state.round - 1] = p.roundCompletedCount;
     state.tileDiscard.push(...p.pool);
     p.pool = [];
     state.cardDiscard.push(...p.hand);
@@ -402,6 +404,7 @@ function endTurn(state) {
   // ends outright (no redeal) as soon as everyone's had equal turns.
   if (state.gameEndTriggered && state.gameEndTargetTurns !== null) {
     if (state.players.every(p => p.turnsThisRound >= state.gameEndTargetTurns)) {
+      state.players.forEach(p => { p.completedByRound[state.round - 1] = p.roundCompletedCount; });
       finalizeGame(state);
       return { success: true, roundEnded: false, gameOver: true };
     }

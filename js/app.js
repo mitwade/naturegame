@@ -23,6 +23,31 @@ let pendingTilePicks = [];      // [{source:'market',marketIndex} | {source:'dra
 
 let passOverlayShownFor = null; // player index we've already shown the overlay for this render
 
+// Undo support: snapshot of STATE taken right before the most recent
+// undo-eligible action. Only ever holds the *single* most recent move, and
+// only when that move didn't reveal hidden information (drawing cards, or
+// drawing tiles from the face-down pile, both reveal something the player
+// would still know even after undoing — so those aren't undoable).
+let undoSnapshot = null; // { state, playerIndex }
+let endTurnPromptShown = false;
+
+function snapshotForUndo() {
+  undoSnapshot = { state: JSON.parse(JSON.stringify(STATE)), playerIndex: STATE.currentPlayerIndex };
+}
+function clearUndo() {
+  undoSnapshot = null;
+}
+async function performUndo() {
+  if (!undoSnapshot) return;
+  const snap = undoSnapshot.state;
+  undoSnapshot = null;
+  await applyAction(state => {
+    Object.keys(state).forEach(k => delete state[k]);
+    Object.assign(state, snap);
+  });
+  toast("Move undone.");
+}
+
 // ---------- Screen helpers ----------
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
@@ -128,6 +153,50 @@ document.querySelectorAll(".mode-card").forEach(card => {
     }
   });
 });
+
+document.getElementById("btn-menu-rules")?.addEventListener("click", openRulesModal);
+document.getElementById("btn-menu-records")?.addEventListener("click", () => {
+  renderRecordsScreen();
+  showScreen("screen-records");
+});
+document.getElementById("btn-records-back")?.addEventListener("click", () => showScreen("screen-menu"));
+
+function renderRecordsScreen() {
+  const records = loadGameRecords().slice().reverse(); // newest first
+  const stats = computeGameStats();
+
+  const summaryEl = document.getElementById("records-summary");
+  if (!stats.length) {
+    summaryEl.innerHTML = "";
+  } else {
+    summaryEl.innerHTML = `<div class="records-stat-grid">` + stats.map(s => `
+      <div class="record-stat-card">
+        <div class="record-stat-title">${MODE_LABELS[s.mode] || s.mode} · ${s.playerCount} players</div>
+        <div class="record-stat-row"><span>Games played</span><strong>${s.games}</strong></div>
+        <div class="record-stat-row"><span>Highest score</span><strong>${s.highest}</strong></div>
+        <div class="record-stat-row"><span>Lowest score</span><strong>${s.lowest}</strong></div>
+        <div class="record-stat-row"><span>Average score</span><strong>${s.average.toFixed(1)}</strong></div>
+        <div class="record-stat-row"><span>Avg cards completed</span><strong>${s.avgCards.toFixed(1)}</strong></div>
+      </div>`).join("") + `</div>`;
+  }
+
+  const listEl = document.getElementById("records-list");
+  if (!records.length) {
+    listEl.innerHTML = `<p style="color:var(--text-dim);">No games recorded yet — finish a game to start building records!</p>`;
+  } else {
+    listEl.innerHTML = records.map(r => {
+      const date = new Date(r.timestamp).toLocaleString();
+      const top = Math.max(...r.players.map(p => p.points));
+      const playersHtml = r.players.slice().sort((a, b) => b.points - a.points).map(p =>
+        `<span class="record-player${p.points === top ? " record-winner" : ""}">${p.points === top ? "🏆 " : ""}${p.name} — ${p.points}pt (${p.cardsCompleted} cards)</span>`
+      ).join("");
+      return `<div class="record-row">
+        <div class="record-row-head"><strong>${MODE_LABELS[r.mode] || r.mode}</strong> · ${r.playerCount} players · <span class="record-date">${date}</span></div>
+        <div class="record-row-players">${playersHtml}</div>
+      </div>`;
+    }).join("");
+  }
+}
 
 // ---------- Local setup (solo / pass) ----------
 function openLocalSetup(mode) {
@@ -439,6 +508,8 @@ function startGameScreen(fromOnline) {
   placementMode = false; pendingPlacements = []; stagedBoardKeys = new Set(); selectedTileIndex = null;
   drawTilesMode = false; pendingTilePicks = [];
   passOverlayShownFor = null;
+  undoSnapshot = null;
+  endTurnPromptShown = false;
   renderGame();
   if (MODE === "pass") maybePassDeviceOverlay();
   maybeRunBotTurn();
@@ -478,11 +549,23 @@ function renderGame() {
   // Players bar
   const inline = document.getElementById("players-inline");
   inline.innerHTML = "";
+  const threshold = ROUND_THRESHOLDS[STATE.round - 1];
   STATE.players.forEach((p, i) => {
     const pts = p.score.reduce((s, cid) => s + CARDS_BY_ID[cid].points, 0);
     const chip = document.createElement("span");
     chip.className = "player-chip" + (i === STATE.currentPlayerIndex ? " active" : "");
-    chip.innerHTML = `${p.isBot ? "🤖" : "🧑"} ${p.name}<span class="pts">${pts}pt</span>`;
+    const roundBits = [];
+    for (let r = 1; r <= 3; r++) {
+      if (r < STATE.round) {
+        roundBits.push(`R${r} ${p.completedByRound?.[r - 1] ?? 0}`);
+      } else if (r === STATE.round) {
+        roundBits.push(`R${r} ${p.roundCompletedCount}/${threshold}`);
+      } else {
+        roundBits.push(`R${r} –`);
+      }
+    }
+    chip.innerHTML = `${p.isBot ? "🤖" : "🧑"} ${p.name}<span class="pts">${pts}pt</span>` +
+      `<span class="round-progress">${roundBits.join(" · ")}</span>`;
     inline.appendChild(chip);
   });
 
@@ -594,6 +677,26 @@ function renderGame() {
 
   document.getElementById("btn-end-turn").disabled = !(myTurn && STATE.turnActionsUsed.length >= 2);
   document.getElementById("action-status").textContent = myTurn ? "" : `Waiting for ${curPlayer.name}…`;
+
+  // Undo — only the client that made the move has a snapshot for it (see
+  // snapshotForUndo), and it's invalidated the moment the turn moves on.
+  if (undoSnapshot && (undoSnapshot.playerIndex !== STATE.currentPlayerIndex || !myTurn)) {
+    undoSnapshot = null;
+  }
+  const undoBtn = document.getElementById("btn-undo");
+  undoBtn.classList.toggle("hidden", !undoSnapshot);
+  undoBtn.disabled = !undoSnapshot || placementMode || drawTilesMode;
+
+  // Prompt to end turn once both actions are used.
+  const turnComplete = myTurn && STATE.turnActionsUsed.length >= 2;
+  const endTurnBtn = document.getElementById("btn-end-turn");
+  endTurnBtn.classList.toggle("pulse-highlight", turnComplete);
+  if (turnComplete && !endTurnPromptShown) {
+    endTurnPromptShown = true;
+    toast("Both actions used — click End Turn to continue.");
+  } else if (!turnComplete) {
+    endTurnPromptShown = false;
+  }
 }
 
 function onBoardSpotClick(spotKey) {
@@ -621,6 +724,7 @@ document.getElementById("btn-action-confirm-placement").addEventListener("click"
   const placements = pendingPlacements.slice();
   const myIndexAtClick = getMyPlayerIndex();
   placementMode = false; pendingPlacements = []; stagedBoardKeys = new Set(); selectedTileIndex = null;
+  snapshotForUndo(); // playing tiles reveals nothing new — always undoable
   await applyAction(state => {
     const pi = state.currentPlayerIndex;
     const res = playTiles(state, pi, placements);
@@ -635,6 +739,7 @@ document.getElementById("btn-action-confirm-placement").addEventListener("click"
 });
 
 document.getElementById("btn-action-draw-cards").addEventListener("click", async () => {
+  clearUndo(); // drawing cards reveals their identity — can't be undone
   await applyAction(state => {
     const res = drawCards(state, state.currentPlayerIndex);
     if (!res.success) toast(res.error);
@@ -667,6 +772,11 @@ function onMarketTileClick(idx) {
 document.getElementById("btn-action-confirm-draw-tiles").addEventListener("click", async () => {
   const picks = pendingTilePicks.map(p => p.source === "market" ? { source: "market", marketIndex: p.marketIndex } : { source: "draw" });
   drawTilesMode = false; pendingTilePicks = [];
+  // Only undoable if every pick came from the face-up Market — drawing from
+  // the face-down pile reveals a tile the player would still know about
+  // even after "undoing", so that's not allowed.
+  const allFaceUp = picks.length > 0 && picks.every(p => p.source === "market");
+  if (allFaceUp) snapshotForUndo(); else clearUndo();
   await applyAction(state => {
     const res = drawTiles(state, state.currentPlayerIndex, picks);
     if (!res.success) toast(res.error);
@@ -674,17 +784,24 @@ document.getElementById("btn-action-confirm-draw-tiles").addEventListener("click
 });
 
 document.getElementById("btn-end-turn").addEventListener("click", async () => {
+  clearUndo();
   await applyAction(state => {
     const res = endTurn(state);
     if (!res.success) toast(res.error);
   });
 });
 
+document.getElementById("btn-undo").addEventListener("click", performUndo);
+
 // ---------- Game over ----------
 function showGameOver() {
+  recordGameResult(STATE, MODE);
   showScreen("screen-gameover");
-  const table = document.getElementById("final-scores-table");
   const winners = STATE.winner || [];
+  const winnerNames = STATE.finalScores.filter(s => winners.includes(s.id)).map(s => s.name).join(" & ");
+  document.getElementById("gameover-winner-line").textContent =
+    winners.length ? `🏆 ${winnerNames} ${winners.length === 1 ? "wins" : "win"}!` : "";
+  const table = document.getElementById("final-scores-table");
   const rows = STATE.finalScores
     .slice()
     .sort((a, b) => b.points - a.points)
