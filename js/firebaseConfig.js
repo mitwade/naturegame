@@ -3,12 +3,12 @@
 // work until you do this — Solo vs Bots and Pass & Play work with zero setup.
 
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAyXRHDWlxYLcnDupcSQOUzyr8b2UNlggI",
+  authDomain: "nature-c0ca2.firebaseapp.com",
+  projectId: "nature-c0ca2",
+  storageBucket: "nature-c0ca2.firebasestorage.app",
+  messagingSenderId: "75641951138",
+  appId: "1:75641951138:web:fbb76c3559b99b982d98fb"
 };
 
 let firebaseApp = null;
