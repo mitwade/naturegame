@@ -675,26 +675,13 @@ function renderGame() {
   document.getElementById("draw-tiles-selected-label").textContent =
     drawTilesMode ? `Selected: ${pendingTilePicks.length}/${Math.min(2, 7 - player.pool.length)}` : "";
 
-  // Pending picks row — lets the player see exactly what they've queued up
-  // (including face-down pile draws, which aren't visible as tiles on the
-  // board), with a single button to clear all picks and start over.
+  // A plain "Unselect Choices" button lets the player clear their in-
+  // progress picks — the actual selection feedback is just the highlight
+  // on the chosen market tile(s) / the pile button, no extra list needed.
   const pendingRow = document.getElementById("draw-tiles-pending-row");
   pendingRow.classList.toggle("hidden", !drawTilesMode || pendingTilePicks.length === 0);
   if (drawTilesMode && pendingTilePicks.length > 0) {
     pendingRow.innerHTML = "";
-    const list = document.createElement("div");
-    list.className = "pending-pick-list";
-    pendingTilePicks.forEach(pick => {
-      const chip = document.createElement("span");
-      chip.className = "pending-pick-chip";
-      if (pick.source === "market") {
-        chip.textContent = `${TERRAIN_EMOJI[STATE.tileMarket[pick.marketIndex]] || "🀫"} ${TERRAIN_LABELS[STATE.tileMarket[pick.marketIndex]] || "Tile"}`;
-      } else {
-        chip.textContent = "🂠 Face-down (random)";
-      }
-      list.appendChild(chip);
-    });
-    pendingRow.appendChild(list);
     const unselectBtn = document.createElement("button");
     unselectBtn.className = "secondary small";
     unselectBtn.textContent = "Unselect Choices";

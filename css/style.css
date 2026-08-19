@@ -141,6 +141,14 @@ p { color: var(--text-dim); line-height: 1.5; }
   color: var(--accent-2);
   margin: 0 0 10px;
 }
+.menu-brand-logo {
+  display: block;
+  width: 120px;
+  height: auto;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 0 3px rgba(227,178,60,0.35);
+}
 .menu-title {
   font-family: Georgia, "Times New Roman", serif;
   text-align: center;
@@ -457,25 +465,9 @@ p { color: var(--text-dim); line-height: 1.5; }
 
 .draw-tiles-pending-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed rgba(255,255,255,0.15);
-}
-.pending-pick-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-.pending-pick-chip {
-  background: var(--panel-2);
-  border: 1px solid var(--accent-2);
-  border-radius: 16px;
-  padding: 4px 10px;
-  font-size: 12px;
 }
 .section-bank { background: linear-gradient(160deg, #3f2f4a, #261c30); border-color: #180f20; }
 
