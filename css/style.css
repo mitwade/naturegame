@@ -454,6 +454,37 @@ p { color: var(--text-dim); line-height: 1.5; }
   box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
 }
 .draw-pile-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+.draw-tiles-pending-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255,255,255,0.15);
+}
+.pending-pick-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent-2);
+  border-radius: 16px;
+  padding: 4px 6px 4px 10px;
+  font-size: 12px;
+}
+.pending-pick-remove {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: var(--text);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pending-pick-remove:hover { background: var(--danger); }
 .section-bank { background: linear-gradient(160deg, #3f2f4a, #261c30); border-color: #180f20; }
 
 .section-otherpools {

@@ -675,6 +675,34 @@ function renderGame() {
   document.getElementById("draw-tiles-selected-label").textContent =
     drawTilesMode ? `Selected: ${pendingTilePicks.length}/${Math.min(2, 7 - player.pool.length)}` : "";
 
+  // Pending picks row — lets the player see exactly what they've queued up
+  // (including face-down pile draws, which aren't visible as tiles on the
+  // board) and remove any single one before confirming.
+  const pendingRow = document.getElementById("draw-tiles-pending-row");
+  pendingRow.classList.toggle("hidden", !drawTilesMode || pendingTilePicks.length === 0);
+  if (drawTilesMode && pendingTilePicks.length > 0) {
+    pendingRow.innerHTML = "";
+    pendingTilePicks.forEach((pick, i) => {
+      const chip = document.createElement("div");
+      chip.className = "pending-pick-chip";
+      if (pick.source === "market") {
+        chip.innerHTML = `<span>${TERRAIN_EMOJI[STATE.tileMarket[pick.marketIndex]] || "🀫"} ${TERRAIN_LABELS[STATE.tileMarket[pick.marketIndex]] || "Tile"}</span>`;
+      } else {
+        chip.innerHTML = `<span>🂠 Face-down (random)</span>`;
+      }
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "pending-pick-remove";
+      removeBtn.title = "Remove this pick";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", () => {
+        pendingTilePicks.splice(i, 1);
+        renderGame();
+      });
+      chip.appendChild(removeBtn);
+      pendingRow.appendChild(chip);
+    });
+  }
+
   // Bank
   const bankEl = document.getElementById("bank-row");
   bankEl.innerHTML = "";
@@ -738,6 +766,7 @@ function renderGame() {
   document.getElementById("btn-action-confirm-draw-tiles").classList.toggle("hidden", !drawTilesMode);
   document.getElementById("btn-action-confirm-draw-tiles").disabled = pendingTilePicks.length === 0;
   document.getElementById("btn-draw-tiles-draw").classList.toggle("hidden", !drawTilesMode);
+  document.getElementById("btn-draw-tiles-cancel").classList.toggle("hidden", !drawTilesMode);
 
   document.getElementById("btn-end-turn").disabled = !(myTurn && STATE.turnActionsUsed.length >= 2);
   document.getElementById("action-status").textContent = myTurn ? "" : `Waiting for ${curPlayer.name}…`;
@@ -812,6 +841,11 @@ document.getElementById("btn-action-draw-cards").addEventListener("click", async
 
 document.getElementById("btn-action-draw-tiles").addEventListener("click", () => {
   drawTilesMode = true; pendingTilePicks = [];
+  renderGame();
+});
+
+document.getElementById("btn-draw-tiles-cancel").addEventListener("click", () => {
+  drawTilesMode = false; pendingTilePicks = [];
   renderGame();
 });
 document.getElementById("btn-draw-tiles-draw").addEventListener("click", () => {
