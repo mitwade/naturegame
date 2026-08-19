@@ -677,30 +677,32 @@ function renderGame() {
 
   // Pending picks row — lets the player see exactly what they've queued up
   // (including face-down pile draws, which aren't visible as tiles on the
-  // board) and remove any single one before confirming.
+  // board), with a single button to clear all picks and start over.
   const pendingRow = document.getElementById("draw-tiles-pending-row");
   pendingRow.classList.toggle("hidden", !drawTilesMode || pendingTilePicks.length === 0);
   if (drawTilesMode && pendingTilePicks.length > 0) {
     pendingRow.innerHTML = "";
-    pendingTilePicks.forEach((pick, i) => {
-      const chip = document.createElement("div");
+    const list = document.createElement("div");
+    list.className = "pending-pick-list";
+    pendingTilePicks.forEach(pick => {
+      const chip = document.createElement("span");
       chip.className = "pending-pick-chip";
       if (pick.source === "market") {
-        chip.innerHTML = `<span>${TERRAIN_EMOJI[STATE.tileMarket[pick.marketIndex]] || "🀫"} ${TERRAIN_LABELS[STATE.tileMarket[pick.marketIndex]] || "Tile"}</span>`;
+        chip.textContent = `${TERRAIN_EMOJI[STATE.tileMarket[pick.marketIndex]] || "🀫"} ${TERRAIN_LABELS[STATE.tileMarket[pick.marketIndex]] || "Tile"}`;
       } else {
-        chip.innerHTML = `<span>🂠 Face-down (random)</span>`;
+        chip.textContent = "🂠 Face-down (random)";
       }
-      const removeBtn = document.createElement("button");
-      removeBtn.className = "pending-pick-remove";
-      removeBtn.title = "Remove this pick";
-      removeBtn.textContent = "✕";
-      removeBtn.addEventListener("click", () => {
-        pendingTilePicks.splice(i, 1);
-        renderGame();
-      });
-      chip.appendChild(removeBtn);
-      pendingRow.appendChild(chip);
+      list.appendChild(chip);
     });
+    pendingRow.appendChild(list);
+    const unselectBtn = document.createElement("button");
+    unselectBtn.className = "secondary small";
+    unselectBtn.textContent = "Unselect Choices";
+    unselectBtn.addEventListener("click", () => {
+      pendingTilePicks = [];
+      renderGame();
+    });
+    pendingRow.appendChild(unselectBtn);
   }
 
   // Bank
