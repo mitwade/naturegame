@@ -33,10 +33,13 @@ function recordGameResult(state, mode) {
   if (!state || !state.finalScores) return;
   const records = loadGameRecords();
   if (records.some(r => r.gameId === state.id)) return;
+  const finishedAt = state.finishedAt || Date.now();
+  const durationMs = state.createdAt ? Math.max(0, finishedAt - state.createdAt) : null;
   const record = {
     gameId: state.id,
     mode: mode || state.mode || "local",
-    timestamp: Date.now(),
+    timestamp: finishedAt,
+    durationMs,
     playerCount: state.players.length,
     players: state.finalScores.map(s => ({
       name: s.name,
@@ -88,12 +91,13 @@ function computeStatsFromRecords(records) {
   const groups = {};
   records.forEach(r => {
     const k = r.mode + "|" + r.playerCount;
-    if (!groups[k]) groups[k] = { mode: r.mode, playerCount: r.playerCount, games: 0, scores: [], cardCounts: [] };
+    if (!groups[k]) groups[k] = { mode: r.mode, playerCount: r.playerCount, games: 0, scores: [], cardCounts: [], durations: [] };
     groups[k].games++;
     r.players.forEach(p => {
       groups[k].scores.push(p.points);
       groups[k].cardCounts.push(p.cardsCompleted);
     });
+    if (typeof r.durationMs === "number" && r.durationMs > 0) groups[k].durations.push(r.durationMs);
   });
   return Object.values(groups)
     .map(g => ({
@@ -103,9 +107,22 @@ function computeStatsFromRecords(records) {
       highest: Math.max(...g.scores),
       lowest: Math.min(...g.scores),
       average: g.scores.reduce((a, b) => a + b, 0) / g.scores.length,
-      avgCards: g.cardCounts.reduce((a, b) => a + b, 0) / g.cardCounts.length
+      avgCards: g.cardCounts.reduce((a, b) => a + b, 0) / g.cardCounts.length,
+      avgDurationMs: g.durations.length ? g.durations.reduce((a, b) => a + b, 0) / g.durations.length : null
     }))
     .sort((a, b) => (a.mode === b.mode ? a.playerCount - b.playerCount : a.mode.localeCompare(b.mode)));
+}
+
+// Formats milliseconds as "1h 12m" / "34m" / "48s" for display.
+function formatDuration(ms) {
+  if (ms === null || ms === undefined || isNaN(ms)) return "—";
+  const totalSec = Math.round(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 // Convenience wrapper for the local ("Yours") tab.

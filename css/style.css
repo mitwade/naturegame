@@ -255,6 +255,14 @@ p { color: var(--text-dim); line-height: 1.5; }
   margin-bottom: 8px;
 }
 .player-row input[type=text] { flex: 1; }
+.bot-difficulty-select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
 
 /* ---------- Game layout ---------- */
 
@@ -716,6 +724,7 @@ p { color: var(--text-dim); line-height: 1.5; }
 .record-row-head { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
 .record-row-head strong { color: var(--text); }
 .record-date { color: var(--text-dim); }
+.record-duration { color: var(--accent-2); }
 .record-row-players { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 13px; }
 .record-player { color: var(--text-dim); }
 .record-player.record-winner { color: var(--accent-2); font-weight: 700; }

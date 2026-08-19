@@ -78,7 +78,7 @@ function renderContinueSection() {
   const passSave = loadLocalSave("pass");
   const onlineSave = loadOnlineSave();
   const items = [];
-  if (soloSave) items.push({ mode: "solo", icon: "🤖", title: "Solo vs Bots", desc: describeLocalSave(soloSave) });
+  if (soloSave) items.push({ mode: "solo", icon: "🖥️", title: "Solo vs Bots", desc: describeLocalSave(soloSave) });
   if (passSave) items.push({ mode: "pass", icon: "📱", title: "Pass & Play", desc: describeLocalSave(passSave) });
   if (onlineSave) items.push({ mode: "online", icon: "🌐", title: "Online Game", desc: `Room code ${onlineSave.code}` });
 
@@ -187,6 +187,7 @@ function renderRecordsSummaryAndList(records, opts = {}) {
         <div class="record-stat-row"><span>Lowest score</span><strong>${s.lowest}</strong></div>
         <div class="record-stat-row"><span>Average score</span><strong>${s.average.toFixed(1)}</strong></div>
         <div class="record-stat-row"><span>Avg cards completed</span><strong>${s.avgCards.toFixed(1)}</strong></div>
+        <div class="record-stat-row"><span>Avg duration</span><strong>${formatDuration(s.avgDurationMs)}</strong></div>
       </div>`).join("") + `</div>`;
   }
 
@@ -201,7 +202,7 @@ function renderRecordsSummaryAndList(records, opts = {}) {
         `<span class="record-player${p.points === top ? " record-winner" : ""}">${p.points === top ? "🏆 " : ""}${p.name} — ${p.points}pt (${p.cardsCompleted} cards)</span>`
       ).join("");
       return `<div class="record-row">
-        <div class="record-row-head"><strong>${MODE_LABELS[r.mode] || r.mode}</strong> · ${r.playerCount} players · <span class="record-date">${date}</span></div>
+        <div class="record-row-head"><strong>${MODE_LABELS[r.mode] || r.mode}</strong> · ${r.playerCount} players · <span class="record-date">${date}</span> · <span class="record-duration">⏱ ${formatDuration(r.durationMs)}</span></div>
         <div class="record-row-players">${playersHtml}</div>
       </div>`;
     }).join("");
@@ -245,7 +246,7 @@ function openLocalSetup(mode) {
   LOCAL_SETUP_PLAYERS = [];
   if (mode === "solo") {
     LOCAL_SETUP_PLAYERS.push({ id: "human1", name: "You", isBot: false });
-    LOCAL_SETUP_PLAYERS.push({ id: "bot1", name: "Bot 1", isBot: true });
+    LOCAL_SETUP_PLAYERS.push({ id: "bot1", name: "Bot 1", isBot: true, botLevel: "medium" });
     document.getElementById("local-setup-title").textContent = "Solo vs Bots";
   } else {
     LOCAL_SETUP_PLAYERS.push({ id: "human1", name: "Player 1", isBot: false });
@@ -263,9 +264,13 @@ function renderLocalSetupList() {
     const row = document.createElement("div");
     row.className = "player-row";
     row.innerHTML = `
-      <span>${p.isBot ? "🤖" : "🧑"}</span>
+      <span>${p.isBot ? "🖥️" : "♟️"}</span>
       <input type="text" value="${p.name}" data-idx="${i}" />
-      <span style="font-size:12px;color:var(--text-dim);">${p.isBot ? "Bot" : "Human"}</span>
+      ${p.isBot
+        ? `<select data-difficulty="${i}" class="bot-difficulty-select">
+            ${BOT_LEVELS.map(lvl => `<option value="${lvl}" ${((p.botLevel || "medium") === lvl) ? "selected" : ""}>${BOT_LEVEL_ICONS[lvl]} ${BOT_LEVEL_LABELS[lvl]}</option>`).join("")}
+          </select>`
+        : `<span style="font-size:12px;color:var(--text-dim);">Human</span>`}
       <button class="secondary small" data-remove="${i}">✕</button>
     `;
     container.appendChild(row);
@@ -274,6 +279,13 @@ function renderLocalSetupList() {
     inp.addEventListener("input", e => {
       LOCAL_SETUP_PLAYERS[+e.target.dataset.idx].name = e.target.value;
     });
+  });
+  container.querySelectorAll("[data-difficulty]").forEach(sel => {
+    sel.addEventListener("change", e => {
+      LOCAL_SETUP_PLAYERS[+e.target.dataset.difficulty].botLevel = e.target.value;
+    });
+    sel.title = BOT_LEVEL_DESCRIPTIONS[sel.value];
+    sel.addEventListener("change", e => { e.target.title = BOT_LEVEL_DESCRIPTIONS[e.target.value]; });
   });
   container.querySelectorAll("[data-remove]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -292,7 +304,7 @@ document.getElementById("btn-add-human").addEventListener("click", () => {
 document.getElementById("btn-add-bot").addEventListener("click", () => {
   if (LOCAL_SETUP_PLAYERS.length >= 6) return toast("Max 6 players.");
   const n = LOCAL_SETUP_PLAYERS.filter(p => p.isBot).length + 1;
-  LOCAL_SETUP_PLAYERS.push({ id: "bot" + Date.now(), name: "Bot " + n, isBot: true });
+  LOCAL_SETUP_PLAYERS.push({ id: "bot" + Date.now(), name: "Bot " + n, isBot: true, botLevel: "medium" });
   renderLocalSetupList();
 });
 document.getElementById("btn-local-back").addEventListener("click", () => showScreen("screen-menu"));
@@ -386,10 +398,21 @@ function onOnlineDocUpdate(data) {
 
 function renderLobbyPlayers(players) {
   const el = document.getElementById("lobby-players");
-  el.innerHTML = players.map(p => `<div class="player-row"><span>${p.isBot ? "🤖" : "🧑"}</span> ${p.name}</div>`).join("");
+  el.innerHTML = players.map(p => `
+    <div class="player-row">
+      <span>${p.isBot ? "🖥️" : "♟️"}</span> ${p.name}
+      ${p.isBot ? `<select data-lobby-difficulty="${p.id}" class="bot-difficulty-select" title="${BOT_LEVEL_DESCRIPTIONS[p.botLevel || "medium"]}">
+        ${BOT_LEVELS.map(lvl => `<option value="${lvl}" ${((p.botLevel || "medium") === lvl) ? "selected" : ""}>${BOT_LEVEL_ICONS[lvl]} ${BOT_LEVEL_LABELS[lvl]}</option>`).join("")}
+      </select>` : ""}
+    </div>`).join("");
+  el.querySelectorAll("[data-lobby-difficulty]").forEach(sel => {
+    sel.addEventListener("change", e => {
+      setLobbyBotDifficulty(ONLINE_CODE, e.target.dataset.lobbyDifficulty, e.target.value).catch(err => toast(err.message || String(err)));
+    });
+  });
 }
 
-document.getElementById("btn-lobby-add-bot").addEventListener("click", () => addBotToLobby(ONLINE_CODE));
+document.getElementById("btn-lobby-add-bot").addEventListener("click", () => addBotToLobby(ONLINE_CODE, "medium"));
 document.getElementById("btn-lobby-start").addEventListener("click", async () => {
   try {
     await startOnlineGame(ONLINE_CODE);
@@ -605,7 +628,7 @@ function renderGame() {
         roundBits.push(`R${r} –`);
       }
     }
-    chip.innerHTML = `${p.isBot ? "🤖" : "🧑"} ${p.name}<span class="pts">${pts}pt</span>` +
+    chip.innerHTML = `${p.isBot ? "🖥️" : "♟️"} ${p.name}<span class="pts">${pts}pt</span>` +
       `<span class="round-progress">${roundBits.join(" · ")}</span>`;
     inline.appendChild(chip);
   });
@@ -680,7 +703,7 @@ function renderGame() {
     row.className = "other-pool-row";
     const label = document.createElement("div");
     label.className = "other-pool-label";
-    label.innerHTML = `${p.isBot ? "🤖" : "🧑"} ${p.name} <span class="pts">(${p.pool.length}/7)</span>`;
+    label.innerHTML = `${p.isBot ? "🖥️" : "♟️"} ${p.name} <span class="pts">(${p.pool.length}/7)</span>`;
     row.appendChild(label);
     const tray = document.createElement("div");
     tray.className = "tile-tray other-pool-tray";

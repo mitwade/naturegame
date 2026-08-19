@@ -39,7 +39,7 @@ function createGame(playerConfigs, options = {}) {
     id: p.id,
     name: p.name,
     isBot: !!p.isBot,
-    botLevel: p.botLevel || "smart",
+    botLevel: p.botLevel || "medium", // easy | medium | hard | expert
     hand: cardDeck.splice(0, 3),
     pool: [tileBag.pop(), tileBag.pop(), tileBag.pop()],
     score: [],
@@ -71,7 +71,9 @@ function createGame(playerConfigs, options = {}) {
     log: [],
     gameOver: false,
     winner: null,
-    finalScores: null
+    finalScores: null,
+    createdAt: options.createdAt || Date.now(),
+    finishedAt: null
   };
 }
 
@@ -370,6 +372,7 @@ function doRoundCleanup(state) {
 
 function finalizeGame(state) {
   state.gameOver = true;
+  state.finishedAt = Date.now();
   const scores = state.players.map(p => ({
     id: p.id,
     name: p.name,

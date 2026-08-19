@@ -2,13 +2,26 @@
 // highest-value pattern(s) it can complete this turn (checking both
 // single- and double-tile placements, since a card can be finished by
 // laying 2 of its 3 tiles in one turn if the board already holds the
-// third). Falls back to sensible drawing behavior otherwise.
+// third). Behavior is tuned per-bot by `player.botLevel`:
+//   easy   - young-kid level: mostly goes for the easy 1pt Triangle
+//            matches, occasionally stumbles onto an Elbow/Line; searches a
+//            small sample of spots so it doesn't "see" everything available.
+//   medium - recognizes all pattern types, but usually plays the 2nd or 3rd
+//            best option instead of the best one (sometimes gets it right).
+//   hard   - strategic: takes the best move ~75% of the time, and leans
+//            toward racing for Bank cards (which anyone could grab) over
+//            its own hidden hand, since those are the ones opponents might
+//            beat it to.
+//   expert - always takes the statistically best move, searches the full
+//            board (no sampling), never leaves points on the table.
 
 function evaluatePlacementValue(state, playerIndex, tempBoard, newKeys) {
   const player = state.players[playerIndex];
+  const bankSet = new Set(state.bank);
   const availableIds = new Set([...state.bank, ...player.hand]);
   const patterns = findPatternsIncluding(tempBoard, newKeys);
   let points = 0;
+  let bankPoints = 0; // subset of points that come from contested Bank cards
   const matchedCardIds = [];
   const seen = new Set();
   for (const pattern of patterns) {
@@ -17,9 +30,11 @@ function evaluatePlacementValue(state, playerIndex, tempBoard, newKeys) {
     if (!cardId || !availableIds.has(cardId) || seen.has(cardId)) continue;
     seen.add(cardId);
     points += SHAPE_POINTS[pattern.shape];
+    if (bankSet.has(cardId)) bankPoints += SHAPE_POINTS[pattern.shape];
     matchedCardIds.push(cardId);
   }
-  return { points, matchedCardIds };
+  const shapes = matchedCardIds.map(cid => CARDS_BY_ID[cid].shape);
+  return { points, bankPoints, matchedCardIds, shapes };
 }
 
 function localCandidateSpots(board, aroundKey) {
@@ -42,23 +57,25 @@ function localCandidateSpots(board, aroundKey) {
   return [...spots];
 }
 
-// Returns { placements:[{terrain,q,r}, ...(1 or 2)], points, matchedCardIds } or null
-function planBestPlacement(state, playerIndex, spotSampleCap = 30) {
+const BOT_SPOT_SAMPLE_CAP = { easy: 10, medium: 20, hard: 30, expert: Infinity };
+
+// Returns a ranked list of candidates: [{ placements, points, bankPoints,
+// matchedCardIds, shapes }, ...] sorted best-first (ties broken randomly so
+// bots don't always prefer the same spot/terrain ordering).
+function rankPlacementCandidates(state, playerIndex, botLevel) {
   const player = state.players[playerIndex];
-  if (player.pool.length === 0) return null;
+  if (player.pool.length === 0) return [];
   const legalSpots = getLegalSpots(state);
-  if (legalSpots.length === 0) return null;
+  if (legalSpots.length === 0) return [];
 
   const board = boardMap(state.board);
   const uniqueTerrains = [...new Set(player.pool)];
-  const spotsSample = legalSpots.length > spotSampleCap
-    ? shuffle(legalSpots).slice(0, spotSampleCap)
+  const cap = BOT_SPOT_SAMPLE_CAP[botLevel] ?? 30;
+  const spotsSample = legalSpots.length > cap
+    ? shuffle(legalSpots).slice(0, cap)
     : legalSpots;
 
-  let best = null;
-  const consider = (candidate) => {
-    if (!best || candidate.points > best.points) best = candidate;
-  };
+  const candidates = [];
 
   for (const terrain of uniqueTerrains) {
     for (const spotKey of spotsSample) {
@@ -66,7 +83,7 @@ function planBestPlacement(state, playerIndex, spotSampleCap = 30) {
       const b1 = new Map(board);
       b1.set(spotKey, terrain);
       const ev1 = evaluatePlacementValue(state, playerIndex, b1, [spotKey]);
-      consider({ placements: [{ terrain, q, r }], points: ev1.points, matchedCardIds: ev1.matchedCardIds });
+      candidates.push({ placements: [{ terrain, q, r }], ...ev1 });
 
       const remainingPool = player.pool.slice();
       remainingPool.splice(remainingPool.indexOf(terrain), 1);
@@ -84,27 +101,106 @@ function planBestPlacement(state, playerIndex, spotSampleCap = 30) {
           const b2 = new Map(b1);
           b2.set(spotKey2, t2);
           const ev2 = evaluatePlacementValue(state, playerIndex, b2, [spotKey, spotKey2]);
-          consider({
+          candidates.push({
             placements: [{ terrain, q, r }, { terrain: t2, q: q2, r: r2 }],
-            points: ev2.points,
-            matchedCardIds: ev2.matchedCardIds
+            ...ev2
           });
         }
       }
     }
   }
-  return best;
+
+  // Rank: raw points first; hard/expert additionally favor claiming
+  // contested Bank cards over hidden-hand cards when points tie, since a
+  // Bank card is something an opponent could grab first ("beat them to it").
+  const favorBank = botLevel === "hard" || botLevel === "expert";
+  candidates.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (favorBank && b.bankPoints !== a.bankPoints) return b.bankPoints - a.bankPoints;
+    return 0;
+  });
+  return candidates;
+}
+
+// Picks a placement from the ranked candidate list according to difficulty.
+function choosePlacementByDifficulty(candidates, botLevel) {
+  if (!candidates.length) return null;
+
+  if (botLevel === "easy") {
+    // Mostly goes for pure-Triangle matches (the "obvious" 1pt play a kid
+    // would spot), only occasionally noticing an Elbow/Line opportunity —
+    // and sometimes just doesn't take the best available move at all.
+    const triangleOnly = candidates.filter(c => c.points === 0 || c.shapes.every(s => s === "triangle"));
+    const pool = triangleOnly.length && Math.random() < 0.8 ? triangleOnly : candidates;
+    // 25% of the time, ignore points entirely and just pick something
+    // reasonable-looking (simulates "doesn't always recognize what's available").
+    if (Math.random() < 0.25) {
+      const zeroOrLow = candidates.filter(c => c.points <= 1);
+      if (zeroOrLow.length) return zeroOrLow[Math.floor(Math.random() * zeroOrLow.length)];
+    }
+    return pool[0] || candidates[0];
+  }
+
+  // Group by distinct point value to get "1st best / 2nd best / 3rd best" tiers.
+  const tiers = [];
+  const seenPoints = new Set();
+  for (const c of candidates) {
+    if (!seenPoints.has(c.points)) { seenPoints.add(c.points); tiers.push(c.points); }
+    if (tiers.length >= 3) break;
+  }
+  const byTier = (pts) => candidates.filter(c => c.points === pts);
+
+  if (botLevel === "medium") {
+    // Usually 2nd/3rd best, sometimes the actual best.
+    const weights = [0.25, 0.4, 0.35].slice(0, tiers.length);
+    const totalW = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * totalW;
+    let idx = 0;
+    for (; idx < weights.length; idx++) {
+      if (roll < weights[idx]) break;
+      roll -= weights[idx];
+    }
+    const tierCandidates = byTier(tiers[idx] ?? tiers[0]);
+    return tierCandidates[Math.floor(Math.random() * tierCandidates.length)];
+  }
+
+  if (botLevel === "hard") {
+    // Best move 75% of the time, otherwise 2nd best.
+    if (Math.random() < 0.75 || tiers.length < 2) return byTier(tiers[0])[0];
+    const secondTier = byTier(tiers[1]);
+    return secondTier[Math.floor(Math.random() * secondTier.length)];
+  }
+
+  // expert: always the best (searched the full board, no sampling).
+  return candidates[0];
+}
+
+function planBestPlacement(state, playerIndex, botLevelOverride) {
+  const player = state.players[playerIndex];
+  const botLevel = botLevelOverride || player.botLevel || "medium";
+  const candidates = rankPlacementCandidates(state, playerIndex, botLevel);
+  return choosePlacementByDifficulty(candidates, botLevel);
 }
 
 // Pick which terrains to draw for the Draw Tiles action: prefer terrains
 // that appear in the bot's own hand cards or the bank (so pool stays useful).
+// Hard/expert bots also weigh terrains opponents are visibly stockpiling in
+// their public tile pools, to deny them useful tiles.
 function pickTileDrawPicks(state, playerIndex, count) {
   const player = state.players[playerIndex];
+  const botLevel = player.botLevel || "medium";
   const wanted = {};
   [...player.hand, ...state.bank].forEach(cardId => {
     const card = CARDS_BY_ID[cardId];
     card.terrains.forEach(t => { wanted[t] = (wanted[t] || 0) + 1; });
   });
+
+  if (botLevel === "hard" || botLevel === "expert") {
+    state.players.forEach((opp, i) => {
+      if (i === playerIndex) return;
+      opp.pool.forEach(t => { wanted[t] = (wanted[t] || 0) + 0.4; }); // denial bonus, weighted below self-interest
+    });
+  }
 
   const picks = [];
   const marketCopy = state.tileMarket.map((t, i) => ({ t, i }));
@@ -128,6 +224,7 @@ function pickTileDrawPicks(state, playerIndex, count) {
 function runBotTurn(state, playerIndex) {
   const events = [];
   const player = state.players[playerIndex];
+  const botLevel = player.botLevel || "medium";
 
   const plan = planBestPlacement(state, playerIndex);
   const shouldPlaceForPoints = plan && plan.points > 0;
@@ -174,7 +271,7 @@ function runBotTurn(state, playerIndex) {
   }
   function tryPlaceFallback() {
     if (!canUseAction(state, playerIndex, "playTiles")) return false;
-    const fallbackPlan = planBestPlacement(state, playerIndex, 15);
+    const fallbackPlan = planBestPlacement(state, playerIndex, botLevel === "expert" ? "expert" : "hard");
     if (!fallbackPlan) return false;
     const res = playTiles(state, playerIndex, fallbackPlan.placements);
     if (res.success) {

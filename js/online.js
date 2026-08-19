@@ -81,7 +81,7 @@ async function joinOnlineGame(code, name) {
   return { code, playerId, data: result };
 }
 
-async function addBotToLobby(code) {
+async function addBotToLobby(code, botLevel) {
   const db = getFirestore();
   const ref = db.collection(GAMES_COLLECTION).doc(code);
   await db.runTransaction(async (tx) => {
@@ -89,7 +89,25 @@ async function addBotToLobby(code) {
     const data = snap.data();
     if (data.lobbyPlayers.length >= 6) return;
     const botNum = data.lobbyPlayers.filter(p => p.isBot).length + 1;
-    data.lobbyPlayers.push({ id: "bot" + botNum + "_" + Math.random().toString(36).slice(2, 6), name: "Bot " + botNum, isBot: true });
+    data.lobbyPlayers.push({
+      id: "bot" + botNum + "_" + Math.random().toString(36).slice(2, 6),
+      name: "Bot " + botNum,
+      isBot: true,
+      botLevel: botLevel || "medium"
+    });
+    tx.update(ref, { lobbyPlayers: data.lobbyPlayers, updatedAt: Date.now() });
+  });
+}
+
+async function setLobbyBotDifficulty(code, playerId, botLevel) {
+  const db = getFirestore();
+  const ref = db.collection(GAMES_COLLECTION).doc(code);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data();
+    const p = data.lobbyPlayers.find(pl => pl.id === playerId);
+    if (!p) return;
+    p.botLevel = botLevel;
     tx.update(ref, { lobbyPlayers: data.lobbyPlayers, updatedAt: Date.now() });
   });
 }
@@ -147,7 +165,7 @@ async function updateGameState(code, mutator) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    createOnlineGame, joinOnlineGame, addBotToLobby, removeLobbyPlayer,
+    createOnlineGame, joinOnlineGame, addBotToLobby, removeLobbyPlayer, setLobbyBotDifficulty,
     startOnlineGame, subscribeToGame, updateGameState, getOrCreateLocalPlayerId,
     generateRoomCode
   };
