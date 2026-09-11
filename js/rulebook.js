@@ -16,11 +16,14 @@ high-scoring plays.</p>
 
 <h3>Components</h3>
 <ul>
-<li><strong>112 Terrain Tiles</strong> — 14 tiles each of 8 terrain types: Volcano, Forest,
-Ocean, Desert, Glacier, Meadow, Pond, Mountain</li>
+<li><strong>Terrain Tiles</strong> — 14 tiles each of 8 terrain types (Volcano, Forest,
+Ocean, Desert, Glacier, Meadow, Pond, Mountain) in a 6-player game — 112 tiles total.
+<strong>The tile supply scales down with fewer players:</strong> remove 2 tiles of each
+terrain for every player below 6. See "Tile Supply by Player Count" below.</li>
 <li><strong>216 Nature Cards</strong>, each unique. 72 cards per pattern type (Triangle,
 Elbow, Straight Line — 24 each). 24 cards built around each of the 8 terrain
-types (192 total), plus 24 additional mixed-terrain cards</li>
+types (192 total), plus 24 additional mixed-terrain cards. The card supply does
+not change with player count.</li>
 </ul>
 <p>Each Nature Card shows a combination of 3 terrains arranged in one of three shapes:</p>
 <ul>
@@ -29,13 +32,30 @@ types (192 total), plus 24 additional mixed-terrain cards</li>
 <li><strong>Straight Line</strong> — 3 points</li>
 </ul>
 
+<h3>Tile Supply by Player Count</h3>
+<p>Fewer players means fewer tiles of each terrain in the bag, so the board doesn't
+end up drowning in a huge surplus of tiles relative to how many hands are drawing
+from it. Set aside tiles you won't use before starting the game:</p>
+<table class="rb-table">
+<tr><th>Players</th><th>Tiles per terrain</th><th>Total tiles</th></tr>
+<tr><td>6</td><td>14</td><td>112</td></tr>
+<tr><td>5</td><td>12</td><td>96</td></tr>
+<tr><td>4</td><td>10</td><td>80</td></tr>
+<tr><td>3</td><td>8</td><td>64</td></tr>
+<tr><td>2</td><td>6</td><td>48</td></tr>
+</table>
+<p class="rb-example">In the app, this is handled automatically based on how many
+players (including bots) you set up — you only need to count out tiles by hand
+for physical play.</p>
+
 <h3>Game Setup</h3>
 <ol>
 <li><strong>Place the Starting Tile</strong> — 1 randomly selected terrain tile face-up in the
 center of the play area.</li>
 <li><strong>Prepare the Card Bank</strong> — Shuffle all 216 Nature Cards. Deal 5 face-up to
 create the public Bank. Remaining deck stays face-down nearby.</li>
-<li><strong>Prepare the Tile Market</strong> — Shuffle all 112 tiles into a face-down draw pile.
+<li><strong>Prepare the Tile Market</strong> — Shuffle the terrain tiles for your player
+count (see "Tile Supply by Player Count" above) into a face-down draw pile.
 Deal 5 face-up to form the public Tile Market.</li>
 <li><strong>Deal Player Hands</strong> — 3 Nature Cards each, kept hidden as a private hand.</li>
 <li><strong>Deal Player Tiles</strong> — 3 terrain tiles each, placed face-up as each player's
@@ -56,10 +76,18 @@ action.</p>
 board (at least 1 is required). Claim any completed cards immediately after
 placement. Always available as long as you have at least one tile in your pool.</li>
 <li><strong>Draw Cards</strong> — Draw exactly 2 Nature Cards from the face-down deck into your
-private hand. No maximum hand limit.</li>
+private hand. <strong>Maximum hand size: 5 cards.</strong> If you have 4 cards, drawing
+draws just 1 (enough to reach exactly 5) instead of 2. If you already have 5, you
+cannot choose Draw Cards at all that turn — play or claim cards first to make room.</li>
 <li><strong>Draw Tiles</strong> — Draw 1 or 2 tiles (your choice) from the face-up Market, the
 face-down pile, or a combination. Must be your second action. Tile limit: never
 more than 7 unplayed tiles in your pool — if already at 7, you can't choose this.</li>
+<li><strong>Skip First Action</strong> — Pass on your first action if you'd rather not Play Tiles
+or Draw Cards. This exists specifically so Draw Tiles — which can only ever be a
+second action — is always reachable: if your pool is empty and your hand is
+already at the 5-card cap, this is your only way to take a turn at all. You can
+also use it any time you'd simply rather draw tiles than do anything else first.
+Skip can only be your first action, never your second.</li>
 </ul>
 
 <h3>Tile Placement Rules</h3>
