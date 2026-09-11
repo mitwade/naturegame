@@ -24,7 +24,8 @@ function boardMap(boardObj) {
 // ---------- Game creation ----------
 
 function createGame(playerConfigs, options = {}) {
-  const tileBag = shuffle(generateTileBag());
+  const perTerrainCount = tileCountPerTerrainForPlayerCount(playerConfigs.length);
+  const tileBag = shuffle(generateTileBag(perTerrainCount));
   const cardDeck = shuffle(ALL_CARD_IDS.slice());
 
   const startingTerrain = tileBag.pop();
@@ -199,6 +200,22 @@ function claimCard(state, playerIndex, cardId) {
   return { success: true, source, card };
 }
 
+// ---------- Skip (first action only) ----------
+
+// Lets a player pass on their FIRST action. The main reason to do this:
+// Draw Tiles can only ever be a *second* action, so a player who just
+// wants to draw tiles this turn (or who has nothing else they can/want to
+// do first -- e.g. an empty pool and a full hand) needs a way to reach
+// their second action slot without being forced into Play Tiles or Draw
+// Cards. Skip can only be chosen as the first action, never the second.
+function skipAction(state, playerIndex) {
+  if (state.currentPlayerIndex !== playerIndex) return { success: false, error: "Not your turn." };
+  if (state.turnActionsUsed.length !== 0) return { success: false, error: "You can only skip your first action." };
+  state.turnActionsUsed.push("skip");
+  logMsg(state, `${state.players[playerIndex].name} skipped their first action.`);
+  return { success: true };
+}
+
 // ---------- Draw actions ----------
 
 function ensureCardDeck(state) {
@@ -212,8 +229,13 @@ function drawCards(state, playerIndex) {
   if (state.currentPlayerIndex !== playerIndex) return { success: false, error: "Not your turn." };
   if (state.turnActionsUsed.includes("drawCards")) return { success: false, error: "Draw Cards already used this turn." };
   const player = state.players[playerIndex];
+  const room = MAX_HAND_SIZE - player.hand.length;
+  if (room <= 0) {
+    return { success: false, error: `Hand is full (max ${MAX_HAND_SIZE} cards) — can't draw more.` };
+  }
+  const numToDraw = Math.min(2, room);
   const drawn = [];
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < numToDraw; i++) {
     ensureCardDeck(state);
     if (state.deckCardIds.length === 0) break;
     drawn.push(state.deckCardIds.shift());
@@ -292,11 +314,37 @@ function canUseAction(state, playerIndex, action) {
   if (state.currentPlayerIndex !== playerIndex) return false;
   if (state.turnActionsUsed.length >= 2) return false;
   if (state.turnActionsUsed.includes(action)) return false;
+  if (action === "playTiles") {
+    if (state.players[playerIndex].pool.length === 0) return false;
+  }
+  if (action === "drawCards") {
+    if (state.players[playerIndex].hand.length >= MAX_HAND_SIZE) return false;
+  }
+  if (action === "skip") {
+    // Skip First Action: a player can always choose to pass on their
+    // first action if they'd rather just use Draw Tiles as their one
+    // real action this turn (Draw Tiles can only ever be a *second*
+    // action -- see below -- so Skip is what lets a player reach it
+    // without being forced into Play Tiles or Draw Cards first).
+    return state.turnActionsUsed.length === 0;
+  }
   if (action === "drawTiles") {
     if (state.turnActionsUsed.length !== 1) return false;
     if (state.players[playerIndex].pool.length >= 7) return false;
   }
   return true;
+}
+
+// True if the player has at least one action they could legally choose
+// right now (accounting for turn-order-so-far, resource availability, and
+// the hand cap). Used so a turn can end early with fewer than 2 actions
+// used, instead of deadlocking, in the rare case where NO action is
+// available at all -- e.g. an empty tile pool combined with a full hand
+// (nothing to place, and no room to draw cards) on what would be a
+// player's first action, since Draw Tiles can only ever be a second
+// action and can't fill that gap either.
+function hasAnyLegalAction(state, playerIndex) {
+  return ["skip", "playTiles", "drawCards", "drawTiles"].some(a => canUseAction(state, playerIndex, a));
 }
 
 // ---------- Turn / round / game flow ----------
@@ -397,10 +445,16 @@ function finalizeGame(state) {
   logMsg(state, `Game over! Winner(s): ${scores.filter(s => winners.includes(s.id)).map(s => s.name).join(", ")}`);
 }
 
-// Call once the active player has completed exactly 2 actions.
+// Call once the active player has completed exactly 2 actions -- or has
+// no legal actions left to take (see hasAnyLegalAction), in which case
+// the turn is allowed to end early rather than deadlocking the game.
 function endTurn(state) {
+  const pi = state.currentPlayerIndex;
   if (state.turnActionsUsed.length < 2) {
-    return { success: false, error: "Turn is not complete (need 2 actions)." };
+    if (hasAnyLegalAction(state, pi)) {
+      return { success: false, error: "Turn is not complete (need 2 actions)." };
+    }
+    logMsg(state, `${state.players[pi].name} has no legal actions available — turn passes.`);
   }
 
   // Supply exhaustion overrides normal round-end: once triggered, the game
@@ -436,7 +490,7 @@ function initFirstTurn(state) {
 if (typeof module !== "undefined") {
   module.exports = {
     CARDS_BY_ID, CARD_KEY_TO_ID, ROUND_THRESHOLDS,
-    createGame, getLegalSpots, playTiles, claimCard, drawCards, drawTiles,
-    canUseAction, endTurn, initFirstTurn, boardMap, findClaimableMatches
+    createGame, getLegalSpots, playTiles, claimCard, drawCards, drawTiles, skipAction,
+    canUseAction, hasAnyLegalAction, endTurn, initFirstTurn, boardMap, findClaimableMatches
   };
 }
