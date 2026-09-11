@@ -78,14 +78,21 @@ function terrainHexGroup(cx, cy, terrain, size, defs, extraClass) {
 
 // Renders the full board into the given <svg>. `legalSpots` is an array of
 // "q,r" keys; `onSpotClick(qr)` fires when a legal empty spot is clicked.
-function renderBoard(svg, state, legalSpots, onSpotClick) {
+// `pendingPlacements` (optional) is the array of {terrain,q,r} the player
+// has staged so far this action but not yet confirmed -- each one gets a
+// semi-transparent "ghost" tile showing the real artwork plus a bright
+// highlighted outline, so it's obvious exactly which tile went where,
+// distinct from the plain dashed styling used for still-open legal spots.
+function renderBoard(svg, state, legalSpots, onSpotClick, pendingPlacements) {
+  pendingPlacements = pendingPlacements || [];
   svg.innerHTML = "";
   const defs = svgEl("defs", {});
   svg.appendChild(defs);
 
   const boardKeys = Object.keys(state.board);
   const legalSet = new Set(legalSpots || []);
-  const allKeys = new Set([...boardKeys, ...legalSet]);
+  const pendingKeys = pendingPlacements.map(p => key(p.q, p.r));
+  const allKeys = new Set([...boardKeys, ...legalSet, ...pendingKeys]);
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   const positions = {};
@@ -120,6 +127,22 @@ function renderBoard(svg, state, legalSpots, onSpotClick) {
     });
     poly.addEventListener("click", () => onSpotClick && onSpotClick(k));
     svg.appendChild(poly);
+  });
+
+  // Staged-but-unconfirmed placements: ghost artwork + bright highlight ring
+  pendingPlacements.forEach(p => {
+    const k = key(p.q, p.r);
+    const pos = positions[k];
+    if (!pos) return;
+    const { x, y } = pos;
+    const ghost = terrainHexGroup(x, y, p.terrain, HEX_SIZE, defs, "hex-ghost-tile");
+    ghost.setAttribute("opacity", "0.65");
+    svg.appendChild(ghost);
+    const ring = svgEl("polygon", {
+      points: hexPoints(x, y),
+      class: "hex-placed-highlight"
+    });
+    svg.appendChild(ring);
   });
 }
 
