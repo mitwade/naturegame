@@ -361,14 +361,14 @@ function runBotTurn(state, playerIndex) {
   // keeps drawing cards until it has a healthy buffer of options (5+)
   // rather than stopping at 4, since more hand cards means more chances to
   // spot a claimable pattern when a good board position comes up.
-  const handTarget = botLevel === "expert" ? 5 : 4;
+  const handTarget = botLevel === "expert" ? MAX_HAND_SIZE : 4;
   const wantsCards = player.hand.length < handTarget;
   const poolRoom = 7 - player.pool.length;
 
   function tryDrawCards() {
     if (canUseAction(state, playerIndex, "drawCards")) {
-      drawCards(state, playerIndex);
-      events.push(`${player.name} drew 2 cards.`);
+      const res = drawCards(state, playerIndex);
+      events.push(`${player.name} drew ${res.drawn ? res.drawn.length : 0} card(s).`);
       return true;
     }
     return false;
@@ -420,10 +420,25 @@ function runBotTurn(state, playerIndex) {
     }
   }
 
+  function trySkip() {
+    if (canUseAction(state, playerIndex, "skip")) {
+      skipAction(state, playerIndex);
+      events.push(`${player.name} skipped their first action.`);
+      return true;
+    }
+    return false;
+  }
+
   let guard = 0;
   while (state.turnActionsUsed.length < 2 && guard < 5) {
     guard++;
-    if (!tryDrawCards() && !tryDrawTiles() && !tryPlaceFallback()) break;
+    if (!tryDrawCards() && !tryDrawTiles() && !tryPlaceFallback()) {
+      // Nothing else worked -- if we're still on the first action, skip
+      // it so Draw Tiles becomes reachable as the second (this is the
+      // escape hatch for an empty pool + a hand already at the cap).
+      if (state.turnActionsUsed.length === 0 && trySkip()) continue;
+      break;
+    }
   }
 
   const er = endTurn(state);
