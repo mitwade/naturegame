@@ -635,7 +635,7 @@ function renderGame() {
 
   // Board
   const legalSpots = placementMode && myTurn ? dynamicLegalSpots() : [];
-  renderBoard(document.getElementById("board-svg"), STATE, legalSpots, onBoardSpotClick);
+  renderBoard(document.getElementById("board-svg"), STATE, legalSpots, onBoardSpotClick, placementMode ? pendingPlacements : []);
 
   // Tile pool (only show/interact if it's my turn)
   const poolEl = document.getElementById("tile-tray");
@@ -708,6 +708,7 @@ function renderGame() {
   const handOwner = MODE === "online" ? STATE.players[me] : player;
   if (handOwner) {
     handOwner.hand.forEach(cardId => handEl.appendChild(renderCard(cardId, {})));
+    document.getElementById("hand-count").textContent = `(${handOwner.hand.length}/${MAX_HAND_SIZE})`;
   }
 
   // Other players' tile pools (public info — visible to everyone; only
@@ -743,10 +744,15 @@ function renderGame() {
 
   document.getElementById("btn-action-play-tiles").classList.toggle("hidden", placementMode);
   document.getElementById("btn-action-play-tiles").disabled = !canPlay;
+  const atHandCap = handOwner ? handOwner.hand.length >= MAX_HAND_SIZE : false;
   document.getElementById("btn-action-draw-cards").disabled = !canDrawCards || placementMode || drawTilesMode;
+  document.getElementById("btn-action-draw-cards").title = (!canDrawCards && atHandCap && myTurn)
+    ? `Hand is full (max ${MAX_HAND_SIZE} cards) — play or claim cards first.` : "";
   document.getElementById("btn-action-draw-cards").classList.toggle("hidden", drawTilesMode);
   document.getElementById("btn-action-draw-tiles").classList.toggle("hidden", placementMode || drawTilesMode);
   document.getElementById("btn-action-draw-tiles").disabled = !canDrawTiles;
+  document.getElementById("btn-action-skip").classList.toggle("hidden", placementMode || drawTilesMode);
+  document.getElementById("btn-action-skip").disabled = !(myTurn && canUseAction(STATE, STATE.currentPlayerIndex, "skip"));
 
   document.getElementById("btn-action-confirm-placement").classList.toggle("hidden", !placementMode);
   document.getElementById("btn-action-confirm-placement").disabled = pendingPlacements.length === 0;
@@ -757,8 +763,11 @@ function renderGame() {
   document.getElementById("btn-draw-tiles-draw").classList.toggle("hidden", !drawTilesMode);
   document.getElementById("btn-draw-tiles-cancel").classList.toggle("hidden", !drawTilesMode);
 
-  document.getElementById("btn-end-turn").disabled = !(myTurn && STATE.turnActionsUsed.length >= 2);
-  document.getElementById("action-status").textContent = myTurn ? "" : `Waiting for ${curPlayer.name}…`;
+  const noActionsLeft = myTurn && STATE.turnActionsUsed.length < 2 && !hasAnyLegalAction(STATE, STATE.currentPlayerIndex);
+  document.getElementById("btn-end-turn").disabled = !(myTurn && (STATE.turnActionsUsed.length >= 2 || noActionsLeft));
+  document.getElementById("action-status").textContent = myTurn
+    ? (noActionsLeft ? "No legal actions available — click End Turn to pass." : "")
+    : `Waiting for ${curPlayer.name}…`;
 
   // Undo — only the client that made the move has a snapshot for it (see
   // snapshotForUndo), and it's invalidated the moment the turn moves on.
@@ -770,7 +779,7 @@ function renderGame() {
   undoBtn.disabled = !undoSnapshot || placementMode || drawTilesMode;
 
   // Prompt to end turn once both actions are used.
-  const turnComplete = myTurn && STATE.turnActionsUsed.length >= 2;
+  const turnComplete = myTurn && (STATE.turnActionsUsed.length >= 2 || noActionsLeft);
   const endTurnBtn = document.getElementById("btn-end-turn");
   endTurnBtn.classList.toggle("pulse-highlight", turnComplete);
   if (turnComplete && !endTurnPromptShown) {
@@ -824,6 +833,14 @@ document.getElementById("btn-action-draw-cards").addEventListener("click", async
   clearUndo(); // drawing cards reveals their identity — can't be undone
   await applyAction(state => {
     const res = drawCards(state, state.currentPlayerIndex);
+    if (!res.success) toast(res.error);
+  });
+});
+
+document.getElementById("btn-action-skip").addEventListener("click", async () => {
+  snapshotForUndo(); // skipping reveals nothing — always undoable
+  await applyAction(state => {
+    const res = skipAction(state, state.currentPlayerIndex);
     if (!res.success) toast(res.error);
   });
 });
