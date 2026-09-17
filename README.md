@@ -118,9 +118,9 @@ nature-game/
   css/style.css            Styling
   js/
     constants.js            Terrain/shape constants, colors, emoji art
-    hexgrid.js               Axial hex-grid math + pattern (triangle/elbow/line) detection
-    cards.js                 Generates the 216-card deck (see note below)
-    tiles.js                 Generates the 112-tile bag, shuffle helper
+    hexgrid.js               Axial hex-grid math + pattern (cluster/hook/ray) detection
+    cards.js                 The fixed 252-card deck (hard-coded, see note below)
+    tiles.js                 Generates the tile bag (scales with player count), shuffle helper
     engine.js                Core rules engine: turns, placement, claiming, rounds, scoring
     bot.js                   Bot AI (looks for completable/near-complete patterns)
     render.js                Hex board + card/tile DOM/SVG rendering
@@ -130,15 +130,15 @@ nature-game/
 ```
 
 ### A note on the Nature Card deck
-The rulebook specifies the deck's *composition* precisely (216 unique cards;
-72 per pattern shape; 24 "built around" each of the 8 terrains, plus 24
-mixed) but the physical card sheets don't come with a machine-readable list
-of each individual card's exact terrain combo. `js/cards.js` **generates** a
-full 216-card deck that exactly matches the documented distribution,
-deterministically and with no duplicates (verified — see below). If you'd
-rather use the *exact* original 216 cards, replace `generateDeck()` in that
-file with a hard-coded array of `{ shape, terrains: [a,b,c] }` objects; every
-other module only depends on that shape, so nothing else needs to change.
+`js/cards.js` contains the fixed, hand-curated 252-card deck as a hard-coded
+array (source of truth: `final_252_card_deck.xlsx`) — every card's exact
+pattern, points, and terrain combo is authored data, not generated. Deck
+composition: 84 Cluster (1pt) + 84 Hook (2pt) + 84 Ray (3pt) = 252. Terrain
+balance across the full deck: 93–96 appearances per terrain. 192 cards repeat
+a terrain (2 or 3 tiles of the same type); 60 use three distinct terrains.
+Every module downstream only depends on each card having
+`{ id, shape, terrains: [a,b,c] }`, so swapping in a revised deck later is
+just a matter of regenerating that one array.
 
 ---
 
@@ -146,9 +146,9 @@ other module only depends on that shape, so nothing else needs to change.
 
 A few rulebook details worth knowing how they were interpreted in code:
 
-- **Elbow vs. Triangle vs. Line** are distinguished purely by geometry: three
-  mutually-touching tiles = Triangle; a bent 3-tile chain whose ends don't
-  touch = Elbow; a straight 3-tile chain = Line. Rotation and mirroring are
+- **Hook vs. Cluster vs. Ray** are distinguished purely by geometry: three
+  mutually-touching tiles = Cluster; a bent 3-tile chain whose ends don't
+  touch = Hook; a straight 3-tile chain = Ray. Rotation and mirroring are
   always allowed automatically, since matching works off hex adjacency, not
   fixed screen orientation.
 - **Claiming** happens automatically and immediately whenever your placement
