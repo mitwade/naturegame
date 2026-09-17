@@ -8,7 +8,7 @@
 // would finish that setup. Difficulty controls how thorough/accurate all
 // of this is:
 //   easy   - young-kid level: small search sample, mostly goes for the
-//            easy 1pt Triangle matches, frequently just doesn't act on
+//            easy 1pt Cluster matches, frequently just doesn't act on
 //            what's available, no lookahead/setup planning, often skips
 //            placing tiles altogether even when it could.
 //   medium - full pattern recognition, a modest amount of setup lookahead,
@@ -179,7 +179,7 @@ function rankPlacementCandidates(state, playerIndex, botLevel) {
 
 // Picks a placement from the ranked candidate list according to difficulty.
 // Important: "usually 2nd/3rd best" should mean picking among comparable
-// options (e.g. an Elbow instead of a Line when both score this turn), not
+// options (e.g. a Hook instead of a Ray when both score this turn), not
 // randomly falling all the way from a scoring move to a zero-point one —
 // that would make a "so-so" bot worse than a bot that never scores at all.
 // So we tier separately within scoring candidates vs. non-scoring
@@ -189,8 +189,8 @@ function choosePlacementByDifficulty(candidates, botLevel) {
   if (!candidates.length) return null;
 
   if (botLevel === "easy") {
-    const triangleOnly = candidates.filter(c => c.points === 0 || c.shapes.every(s => s === "triangle"));
-    const pool = triangleOnly.length && Math.random() < 0.8 ? triangleOnly : candidates;
+    const clusterOnly = candidates.filter(c => c.points === 0 || c.shapes.every(s => s === "cluster"));
+    const pool = clusterOnly.length && Math.random() < 0.8 ? clusterOnly : candidates;
     if (Math.random() < 0.25) {
       const zeroOrLow = candidates.filter(c => c.points <= 1);
       if (zeroOrLow.length) return zeroOrLow[Math.floor(Math.random() * zeroOrLow.length)];

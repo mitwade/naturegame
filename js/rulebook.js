@@ -20,16 +20,17 @@ high-scoring plays.</p>
 Ocean, Desert, Glacier, Meadow, Pond, Mountain) in a 6-player game — 112 tiles total.
 <strong>The tile supply scales down with fewer players:</strong> remove 2 tiles of each
 terrain for every player below 6. See "Tile Supply by Player Count" below.</li>
-<li><strong>216 Nature Cards</strong>, each unique. 72 cards per pattern type (Triangle,
-Elbow, Straight Line — 24 each). 24 cards built around each of the 8 terrain
-types (192 total), plus 24 additional mixed-terrain cards. The card supply does
-not change with player count.</li>
+<li><strong>252 Nature Cards</strong>, each unique. 84 cards per pattern type (Cluster,
+Hook, Ray — 84 each). Terrain balance across the full deck is close to perfectly
+even — each of the 8 terrains appears 93–96 times total. 192 cards repeat a
+terrain (2 or 3 tiles of the same type); the other 60 use three distinct
+terrains. The card supply does not change with player count.</li>
 </ul>
 <p>Each Nature Card shows a combination of 3 terrains arranged in one of three shapes:</p>
 <ul>
-<li><strong>Triangle</strong> (side-by-side cluster) — 1 point</li>
-<li><strong>Elbow</strong> (bent shape) — 2 points</li>
-<li><strong>Straight Line</strong> — 3 points</li>
+<li><strong>Cluster</strong> (side-by-side cluster) — 1 point</li>
+<li><strong>Hook</strong> (bent shape) — 2 points</li>
+<li><strong>Ray</strong> (straight line) — 3 points</li>
 </ul>
 
 <h3>Tile Supply by Player Count</h3>
@@ -52,7 +53,7 @@ for physical play.</p>
 <ol>
 <li><strong>Place the Starting Tile</strong> — 1 randomly selected terrain tile face-up in the
 center of the play area.</li>
-<li><strong>Prepare the Card Bank</strong> — Shuffle all 216 Nature Cards. Deal 5 face-up to
+<li><strong>Prepare the Card Bank</strong> — Shuffle all 252 Nature Cards. Deal 5 face-up to
 create the public Bank. Remaining deck stays face-down nearby.</li>
 <li><strong>Prepare the Tile Market</strong> — Shuffle the terrain tiles for your player
 count (see "Tile Supply by Player Count" above) into a face-down draw pile.
@@ -112,11 +113,11 @@ types, arranged in the listed shape in any orientation (rotated, mirrored, or
 upside down) — with your own tile as the one that completes the arrangement on
 your turn.</p>
 <ul>
-<li><strong>Triangle</strong> — all three tiles mutually touch each other, forming a tight
-cluster meeting at a single shared corner.</li>
-<li><strong>Elbow</strong> — a connected chain (tile 1 – tile 2 – tile 3) that bends; tile 3 is
+<li><strong>Cluster</strong> — all three tiles mutually touch each other, forming a tight
+group meeting at a single shared corner.</li>
+<li><strong>Hook</strong> — a connected chain (tile 1 – tile 2 – tile 3) that bends; tile 3 is
 not directly opposite tile 1 across tile 2.</li>
-<li><strong>Straight Line</strong> — a connected chain running the same direction the whole
+<li><strong>Ray</strong> — a connected chain running the same direction the whole
 way; tile 3 is directly opposite tile 1 across tile 2.</li>
 </ul>
 

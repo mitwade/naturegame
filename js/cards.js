@@ -1,75 +1,283 @@
-// Generates the 216-card Nature Card deck.
+// The 252-card Nature Card deck. This is a fixed, hand-curated list (source
+// of truth: final_252_card_deck.xlsx), not procedurally generated -- every
+// card's exact pattern, points, and terrain combo is authored data, not
+// derived. Each card: { id, shape, terrains, points }, where terrains is
+// [end, pivot, end] for hook/ray (order matters for the middle position;
+// the two ends are interchangeable) or [a, b, c] for cluster (order never
+// matters -- all three tiles just mutually touch).
 //
-// NOTE ON DATA: the physical card sheets show 216 hand-illustrated cards,
-// but the rulebook only specifies the *distribution* (72 cards per shape;
-// 24 "built around" each of the 8 terrains + 24 mixed), not each card's
-// exact terrain combo. Rather than guess-transcribe 216 individual cards
-// from images, this file *generates* a deck that satisfies the documented
-// distribution exactly, with deterministic, unique, non-overlapping combos.
-// If you have (or make) an authoritative card list, replace generateDeck()
-// with a hard-coded array — every other module only depends on each card
-// having { id, shape, terrains: [end, pivot, end] | [a,b,c], points }.
+// Deck composition: 84 Cluster (1pt) + 84 Hook (2pt) + 84 Ray (3pt) = 252.
+// Terrain balance across the full deck: 93-96 appearances per terrain
+// (as close to perfectly even as 252 / 8 = 31.5 cards' worth of terrain
+// slots allows). 192 cards repeat a terrain (2 or 3 of the same type);
+// 60 cards use three distinct terrains.
 
 function cardCanonicalKey(shape, terrains) {
-  if (shape === "triangle") {
-    return "triangle:" + [...terrains].sort().join(",");
+  if (shape === "cluster") {
+    return "cluster:" + [...terrains].sort().join(",");
   }
   const ends = [terrains[0], terrains[2]].sort();
   return shape + ":" + terrains[1] + ":" + ends.join(",");
 }
 
+const DECK_DATA = [
+  { id: "C001", shape: "cluster", terrains: ["desert","desert","desert"], points: 1 },
+  { id: "C002", shape: "cluster", terrains: ["desert","desert","glacier"], points: 1 },
+  { id: "C003", shape: "cluster", terrains: ["desert","desert","ocean"], points: 1 },
+  { id: "C004", shape: "cluster", terrains: ["desert","desert","pond"], points: 1 },
+  { id: "C005", shape: "cluster", terrains: ["desert","desert","mountain"], points: 1 },
+  { id: "C006", shape: "cluster", terrains: ["desert","desert","meadow"], points: 1 },
+  { id: "C007", shape: "cluster", terrains: ["desert","desert","volcano"], points: 1 },
+  { id: "C008", shape: "cluster", terrains: ["desert","desert","forest"], points: 1 },
+  { id: "C009", shape: "cluster", terrains: ["desert","glacier","glacier"], points: 1 },
+  { id: "C010", shape: "cluster", terrains: ["desert","ocean","ocean"], points: 1 },
+  { id: "C011", shape: "cluster", terrains: ["desert","pond","pond"], points: 1 },
+  { id: "C012", shape: "cluster", terrains: ["desert","mountain","mountain"], points: 1 },
+  { id: "C013", shape: "cluster", terrains: ["desert","meadow","meadow"], points: 1 },
+  { id: "C014", shape: "cluster", terrains: ["desert","volcano","volcano"], points: 1 },
+  { id: "C015", shape: "cluster", terrains: ["desert","forest","forest"], points: 1 },
+  { id: "C016", shape: "cluster", terrains: ["glacier","glacier","glacier"], points: 1 },
+  { id: "C017", shape: "cluster", terrains: ["glacier","glacier","ocean"], points: 1 },
+  { id: "C018", shape: "cluster", terrains: ["glacier","glacier","pond"], points: 1 },
+  { id: "C019", shape: "cluster", terrains: ["glacier","glacier","mountain"], points: 1 },
+  { id: "C020", shape: "cluster", terrains: ["glacier","glacier","meadow"], points: 1 },
+  { id: "C021", shape: "cluster", terrains: ["glacier","glacier","volcano"], points: 1 },
+  { id: "C022", shape: "cluster", terrains: ["glacier","glacier","forest"], points: 1 },
+  { id: "C023", shape: "cluster", terrains: ["glacier","ocean","ocean"], points: 1 },
+  { id: "C024", shape: "cluster", terrains: ["glacier","pond","pond"], points: 1 },
+  { id: "C025", shape: "cluster", terrains: ["glacier","mountain","mountain"], points: 1 },
+  { id: "C026", shape: "cluster", terrains: ["glacier","meadow","meadow"], points: 1 },
+  { id: "C027", shape: "cluster", terrains: ["glacier","volcano","volcano"], points: 1 },
+  { id: "C028", shape: "cluster", terrains: ["glacier","forest","forest"], points: 1 },
+  { id: "C029", shape: "cluster", terrains: ["ocean","ocean","ocean"], points: 1 },
+  { id: "C030", shape: "cluster", terrains: ["ocean","ocean","pond"], points: 1 },
+  { id: "C031", shape: "cluster", terrains: ["ocean","ocean","mountain"], points: 1 },
+  { id: "C032", shape: "cluster", terrains: ["ocean","ocean","meadow"], points: 1 },
+  { id: "C033", shape: "cluster", terrains: ["ocean","ocean","volcano"], points: 1 },
+  { id: "C034", shape: "cluster", terrains: ["ocean","ocean","forest"], points: 1 },
+  { id: "C035", shape: "cluster", terrains: ["ocean","pond","pond"], points: 1 },
+  { id: "C036", shape: "cluster", terrains: ["ocean","mountain","mountain"], points: 1 },
+  { id: "C037", shape: "cluster", terrains: ["ocean","meadow","meadow"], points: 1 },
+  { id: "C038", shape: "cluster", terrains: ["ocean","volcano","volcano"], points: 1 },
+  { id: "C039", shape: "cluster", terrains: ["ocean","forest","forest"], points: 1 },
+  { id: "C040", shape: "cluster", terrains: ["pond","pond","pond"], points: 1 },
+  { id: "C041", shape: "cluster", terrains: ["pond","pond","mountain"], points: 1 },
+  { id: "C042", shape: "cluster", terrains: ["pond","pond","meadow"], points: 1 },
+  { id: "C043", shape: "cluster", terrains: ["pond","pond","volcano"], points: 1 },
+  { id: "C044", shape: "cluster", terrains: ["pond","pond","forest"], points: 1 },
+  { id: "C045", shape: "cluster", terrains: ["pond","mountain","mountain"], points: 1 },
+  { id: "C046", shape: "cluster", terrains: ["pond","meadow","meadow"], points: 1 },
+  { id: "C047", shape: "cluster", terrains: ["pond","volcano","volcano"], points: 1 },
+  { id: "C048", shape: "cluster", terrains: ["pond","forest","forest"], points: 1 },
+  { id: "C049", shape: "cluster", terrains: ["mountain","mountain","mountain"], points: 1 },
+  { id: "C050", shape: "cluster", terrains: ["mountain","mountain","meadow"], points: 1 },
+  { id: "C051", shape: "cluster", terrains: ["mountain","mountain","volcano"], points: 1 },
+  { id: "C052", shape: "cluster", terrains: ["mountain","mountain","forest"], points: 1 },
+  { id: "C053", shape: "cluster", terrains: ["mountain","meadow","meadow"], points: 1 },
+  { id: "C054", shape: "cluster", terrains: ["mountain","volcano","volcano"], points: 1 },
+  { id: "C055", shape: "cluster", terrains: ["mountain","forest","forest"], points: 1 },
+  { id: "C056", shape: "cluster", terrains: ["meadow","meadow","meadow"], points: 1 },
+  { id: "C057", shape: "cluster", terrains: ["meadow","meadow","volcano"], points: 1 },
+  { id: "C058", shape: "cluster", terrains: ["meadow","meadow","forest"], points: 1 },
+  { id: "C059", shape: "cluster", terrains: ["meadow","volcano","volcano"], points: 1 },
+  { id: "C060", shape: "cluster", terrains: ["meadow","forest","forest"], points: 1 },
+  { id: "C061", shape: "cluster", terrains: ["volcano","volcano","volcano"], points: 1 },
+  { id: "C062", shape: "cluster", terrains: ["volcano","volcano","forest"], points: 1 },
+  { id: "C063", shape: "cluster", terrains: ["volcano","forest","forest"], points: 1 },
+  { id: "C064", shape: "cluster", terrains: ["forest","forest","forest"], points: 1 },
+  { id: "C065", shape: "hook", terrains: ["desert","desert","desert"], points: 2 },
+  { id: "C066", shape: "hook", terrains: ["desert","desert","glacier"], points: 2 },
+  { id: "C067", shape: "hook", terrains: ["desert","desert","ocean"], points: 2 },
+  { id: "C068", shape: "hook", terrains: ["desert","desert","pond"], points: 2 },
+  { id: "C069", shape: "hook", terrains: ["desert","desert","mountain"], points: 2 },
+  { id: "C070", shape: "hook", terrains: ["desert","desert","meadow"], points: 2 },
+  { id: "C071", shape: "hook", terrains: ["desert","desert","volcano"], points: 2 },
+  { id: "C072", shape: "hook", terrains: ["desert","desert","forest"], points: 2 },
+  { id: "C073", shape: "hook", terrains: ["desert","glacier","glacier"], points: 2 },
+  { id: "C074", shape: "hook", terrains: ["desert","ocean","ocean"], points: 2 },
+  { id: "C075", shape: "hook", terrains: ["desert","pond","pond"], points: 2 },
+  { id: "C076", shape: "hook", terrains: ["desert","mountain","mountain"], points: 2 },
+  { id: "C077", shape: "hook", terrains: ["desert","meadow","meadow"], points: 2 },
+  { id: "C078", shape: "hook", terrains: ["desert","volcano","volcano"], points: 2 },
+  { id: "C079", shape: "hook", terrains: ["desert","forest","forest"], points: 2 },
+  { id: "C080", shape: "hook", terrains: ["glacier","glacier","glacier"], points: 2 },
+  { id: "C081", shape: "hook", terrains: ["glacier","glacier","ocean"], points: 2 },
+  { id: "C082", shape: "hook", terrains: ["glacier","glacier","pond"], points: 2 },
+  { id: "C083", shape: "hook", terrains: ["glacier","glacier","mountain"], points: 2 },
+  { id: "C084", shape: "hook", terrains: ["glacier","glacier","meadow"], points: 2 },
+  { id: "C085", shape: "hook", terrains: ["glacier","glacier","volcano"], points: 2 },
+  { id: "C086", shape: "hook", terrains: ["glacier","glacier","forest"], points: 2 },
+  { id: "C087", shape: "hook", terrains: ["glacier","ocean","ocean"], points: 2 },
+  { id: "C088", shape: "hook", terrains: ["glacier","pond","pond"], points: 2 },
+  { id: "C089", shape: "hook", terrains: ["glacier","mountain","mountain"], points: 2 },
+  { id: "C090", shape: "hook", terrains: ["glacier","meadow","meadow"], points: 2 },
+  { id: "C091", shape: "hook", terrains: ["glacier","volcano","volcano"], points: 2 },
+  { id: "C092", shape: "hook", terrains: ["glacier","forest","forest"], points: 2 },
+  { id: "C093", shape: "hook", terrains: ["ocean","ocean","ocean"], points: 2 },
+  { id: "C094", shape: "hook", terrains: ["ocean","ocean","pond"], points: 2 },
+  { id: "C095", shape: "hook", terrains: ["ocean","ocean","mountain"], points: 2 },
+  { id: "C096", shape: "hook", terrains: ["ocean","ocean","meadow"], points: 2 },
+  { id: "C097", shape: "hook", terrains: ["ocean","ocean","volcano"], points: 2 },
+  { id: "C098", shape: "hook", terrains: ["ocean","ocean","forest"], points: 2 },
+  { id: "C099", shape: "hook", terrains: ["ocean","pond","pond"], points: 2 },
+  { id: "C100", shape: "hook", terrains: ["ocean","mountain","mountain"], points: 2 },
+  { id: "C101", shape: "hook", terrains: ["ocean","meadow","meadow"], points: 2 },
+  { id: "C102", shape: "hook", terrains: ["ocean","volcano","volcano"], points: 2 },
+  { id: "C103", shape: "hook", terrains: ["ocean","forest","forest"], points: 2 },
+  { id: "C104", shape: "hook", terrains: ["pond","pond","pond"], points: 2 },
+  { id: "C105", shape: "hook", terrains: ["pond","pond","mountain"], points: 2 },
+  { id: "C106", shape: "hook", terrains: ["pond","pond","meadow"], points: 2 },
+  { id: "C107", shape: "hook", terrains: ["pond","pond","volcano"], points: 2 },
+  { id: "C108", shape: "hook", terrains: ["pond","pond","forest"], points: 2 },
+  { id: "C109", shape: "hook", terrains: ["pond","mountain","mountain"], points: 2 },
+  { id: "C110", shape: "hook", terrains: ["pond","meadow","meadow"], points: 2 },
+  { id: "C111", shape: "hook", terrains: ["pond","volcano","volcano"], points: 2 },
+  { id: "C112", shape: "hook", terrains: ["pond","forest","forest"], points: 2 },
+  { id: "C113", shape: "hook", terrains: ["mountain","mountain","mountain"], points: 2 },
+  { id: "C114", shape: "hook", terrains: ["mountain","mountain","meadow"], points: 2 },
+  { id: "C115", shape: "hook", terrains: ["mountain","mountain","volcano"], points: 2 },
+  { id: "C116", shape: "hook", terrains: ["mountain","mountain","forest"], points: 2 },
+  { id: "C117", shape: "hook", terrains: ["mountain","meadow","meadow"], points: 2 },
+  { id: "C118", shape: "hook", terrains: ["mountain","volcano","volcano"], points: 2 },
+  { id: "C119", shape: "hook", terrains: ["mountain","forest","forest"], points: 2 },
+  { id: "C120", shape: "hook", terrains: ["meadow","meadow","meadow"], points: 2 },
+  { id: "C121", shape: "hook", terrains: ["meadow","meadow","volcano"], points: 2 },
+  { id: "C122", shape: "hook", terrains: ["meadow","meadow","forest"], points: 2 },
+  { id: "C123", shape: "hook", terrains: ["meadow","volcano","volcano"], points: 2 },
+  { id: "C124", shape: "hook", terrains: ["meadow","forest","forest"], points: 2 },
+  { id: "C125", shape: "hook", terrains: ["volcano","volcano","volcano"], points: 2 },
+  { id: "C126", shape: "hook", terrains: ["volcano","volcano","forest"], points: 2 },
+  { id: "C127", shape: "hook", terrains: ["volcano","forest","forest"], points: 2 },
+  { id: "C128", shape: "hook", terrains: ["forest","forest","forest"], points: 2 },
+  { id: "C129", shape: "ray", terrains: ["desert","desert","desert"], points: 3 },
+  { id: "C130", shape: "ray", terrains: ["desert","desert","glacier"], points: 3 },
+  { id: "C131", shape: "ray", terrains: ["desert","desert","ocean"], points: 3 },
+  { id: "C132", shape: "ray", terrains: ["desert","desert","pond"], points: 3 },
+  { id: "C133", shape: "ray", terrains: ["desert","desert","mountain"], points: 3 },
+  { id: "C134", shape: "ray", terrains: ["desert","desert","meadow"], points: 3 },
+  { id: "C135", shape: "ray", terrains: ["desert","desert","volcano"], points: 3 },
+  { id: "C136", shape: "ray", terrains: ["desert","desert","forest"], points: 3 },
+  { id: "C137", shape: "ray", terrains: ["desert","glacier","glacier"], points: 3 },
+  { id: "C138", shape: "ray", terrains: ["desert","ocean","ocean"], points: 3 },
+  { id: "C139", shape: "ray", terrains: ["desert","pond","pond"], points: 3 },
+  { id: "C140", shape: "ray", terrains: ["desert","mountain","mountain"], points: 3 },
+  { id: "C141", shape: "ray", terrains: ["desert","meadow","meadow"], points: 3 },
+  { id: "C142", shape: "ray", terrains: ["desert","volcano","volcano"], points: 3 },
+  { id: "C143", shape: "ray", terrains: ["desert","forest","forest"], points: 3 },
+  { id: "C144", shape: "ray", terrains: ["glacier","glacier","glacier"], points: 3 },
+  { id: "C145", shape: "ray", terrains: ["glacier","glacier","ocean"], points: 3 },
+  { id: "C146", shape: "ray", terrains: ["glacier","glacier","pond"], points: 3 },
+  { id: "C147", shape: "ray", terrains: ["glacier","glacier","mountain"], points: 3 },
+  { id: "C148", shape: "ray", terrains: ["glacier","glacier","meadow"], points: 3 },
+  { id: "C149", shape: "ray", terrains: ["glacier","glacier","volcano"], points: 3 },
+  { id: "C150", shape: "ray", terrains: ["glacier","glacier","forest"], points: 3 },
+  { id: "C151", shape: "ray", terrains: ["glacier","ocean","ocean"], points: 3 },
+  { id: "C152", shape: "ray", terrains: ["glacier","pond","pond"], points: 3 },
+  { id: "C153", shape: "ray", terrains: ["glacier","mountain","mountain"], points: 3 },
+  { id: "C154", shape: "ray", terrains: ["glacier","meadow","meadow"], points: 3 },
+  { id: "C155", shape: "ray", terrains: ["glacier","volcano","volcano"], points: 3 },
+  { id: "C156", shape: "ray", terrains: ["glacier","forest","forest"], points: 3 },
+  { id: "C157", shape: "ray", terrains: ["ocean","ocean","ocean"], points: 3 },
+  { id: "C158", shape: "ray", terrains: ["ocean","ocean","pond"], points: 3 },
+  { id: "C159", shape: "ray", terrains: ["ocean","ocean","mountain"], points: 3 },
+  { id: "C160", shape: "ray", terrains: ["ocean","ocean","meadow"], points: 3 },
+  { id: "C161", shape: "ray", terrains: ["ocean","ocean","volcano"], points: 3 },
+  { id: "C162", shape: "ray", terrains: ["ocean","ocean","forest"], points: 3 },
+  { id: "C163", shape: "ray", terrains: ["ocean","pond","pond"], points: 3 },
+  { id: "C164", shape: "ray", terrains: ["ocean","mountain","mountain"], points: 3 },
+  { id: "C165", shape: "ray", terrains: ["ocean","meadow","meadow"], points: 3 },
+  { id: "C166", shape: "ray", terrains: ["ocean","volcano","volcano"], points: 3 },
+  { id: "C167", shape: "ray", terrains: ["ocean","forest","forest"], points: 3 },
+  { id: "C168", shape: "ray", terrains: ["pond","pond","pond"], points: 3 },
+  { id: "C169", shape: "ray", terrains: ["pond","pond","mountain"], points: 3 },
+  { id: "C170", shape: "ray", terrains: ["pond","pond","meadow"], points: 3 },
+  { id: "C171", shape: "ray", terrains: ["pond","pond","volcano"], points: 3 },
+  { id: "C172", shape: "ray", terrains: ["pond","pond","forest"], points: 3 },
+  { id: "C173", shape: "ray", terrains: ["pond","mountain","mountain"], points: 3 },
+  { id: "C174", shape: "ray", terrains: ["pond","meadow","meadow"], points: 3 },
+  { id: "C175", shape: "ray", terrains: ["pond","volcano","volcano"], points: 3 },
+  { id: "C176", shape: "ray", terrains: ["pond","forest","forest"], points: 3 },
+  { id: "C177", shape: "ray", terrains: ["mountain","mountain","mountain"], points: 3 },
+  { id: "C178", shape: "ray", terrains: ["mountain","mountain","meadow"], points: 3 },
+  { id: "C179", shape: "ray", terrains: ["mountain","mountain","volcano"], points: 3 },
+  { id: "C180", shape: "ray", terrains: ["mountain","mountain","forest"], points: 3 },
+  { id: "C181", shape: "ray", terrains: ["mountain","meadow","meadow"], points: 3 },
+  { id: "C182", shape: "ray", terrains: ["mountain","volcano","volcano"], points: 3 },
+  { id: "C183", shape: "ray", terrains: ["mountain","forest","forest"], points: 3 },
+  { id: "C184", shape: "ray", terrains: ["meadow","meadow","meadow"], points: 3 },
+  { id: "C185", shape: "ray", terrains: ["meadow","meadow","volcano"], points: 3 },
+  { id: "C186", shape: "ray", terrains: ["meadow","meadow","forest"], points: 3 },
+  { id: "C187", shape: "ray", terrains: ["meadow","volcano","volcano"], points: 3 },
+  { id: "C188", shape: "ray", terrains: ["meadow","forest","forest"], points: 3 },
+  { id: "C189", shape: "ray", terrains: ["volcano","volcano","volcano"], points: 3 },
+  { id: "C190", shape: "ray", terrains: ["volcano","volcano","forest"], points: 3 },
+  { id: "C191", shape: "ray", terrains: ["volcano","forest","forest"], points: 3 },
+  { id: "C192", shape: "ray", terrains: ["forest","forest","forest"], points: 3 },
+  { id: "C193", shape: "cluster", terrains: ["glacier","mountain","volcano"], points: 1 },
+  { id: "C194", shape: "cluster", terrains: ["desert","ocean","forest"], points: 1 },
+  { id: "C195", shape: "cluster", terrains: ["pond","mountain","meadow"], points: 1 },
+  { id: "C196", shape: "cluster", terrains: ["glacier","ocean","volcano"], points: 1 },
+  { id: "C197", shape: "cluster", terrains: ["desert","meadow","forest"], points: 1 },
+  { id: "C198", shape: "cluster", terrains: ["desert","pond","mountain"], points: 1 },
+  { id: "C199", shape: "cluster", terrains: ["glacier","pond","forest"], points: 1 },
+  { id: "C200", shape: "cluster", terrains: ["ocean","meadow","volcano"], points: 1 },
+  { id: "C201", shape: "cluster", terrains: ["glacier","ocean","mountain"], points: 1 },
+  { id: "C202", shape: "cluster", terrains: ["pond","meadow","volcano"], points: 1 },
+  { id: "C203", shape: "cluster", terrains: ["desert","mountain","forest"], points: 1 },
+  { id: "C204", shape: "cluster", terrains: ["desert","glacier","ocean"], points: 1 },
+  { id: "C205", shape: "cluster", terrains: ["meadow","volcano","forest"], points: 1 },
+  { id: "C206", shape: "cluster", terrains: ["pond","mountain","forest"], points: 1 },
+  { id: "C207", shape: "cluster", terrains: ["glacier","ocean","pond"], points: 1 },
+  { id: "C208", shape: "cluster", terrains: ["desert","meadow","volcano"], points: 1 },
+  { id: "C209", shape: "cluster", terrains: ["ocean","pond","mountain"], points: 1 },
+  { id: "C210", shape: "cluster", terrains: ["glacier","meadow","volcano"], points: 1 },
+  { id: "C211", shape: "cluster", terrains: ["desert","pond","forest"], points: 1 },
+  { id: "C212", shape: "cluster", terrains: ["ocean","mountain","forest"], points: 1 },
+  { id: "C213", shape: "hook", terrains: ["desert","ocean","meadow"], points: 2 },
+  { id: "C214", shape: "hook", terrains: ["glacier","mountain","forest"], points: 2 },
+  { id: "C215", shape: "hook", terrains: ["pond","mountain","volcano"], points: 2 },
+  { id: "C216", shape: "hook", terrains: ["desert","ocean","volcano"], points: 2 },
+  { id: "C217", shape: "hook", terrains: ["pond","meadow","forest"], points: 2 },
+  { id: "C218", shape: "hook", terrains: ["glacier","ocean","mountain"], points: 2 },
+  { id: "C219", shape: "hook", terrains: ["desert","glacier","meadow"], points: 2 },
+  { id: "C220", shape: "hook", terrains: ["pond","volcano","forest"], points: 2 },
+  { id: "C221", shape: "hook", terrains: ["desert","ocean","pond"], points: 2 },
+  { id: "C222", shape: "hook", terrains: ["glacier","mountain","meadow"], points: 2 },
+  { id: "C223", shape: "hook", terrains: ["mountain","volcano","forest"], points: 2 },
+  { id: "C224", shape: "hook", terrains: ["desert","glacier","ocean"], points: 2 },
+  { id: "C225", shape: "hook", terrains: ["meadow","volcano","forest"], points: 2 },
+  { id: "C226", shape: "hook", terrains: ["pond","mountain","meadow"], points: 2 },
+  { id: "C227", shape: "hook", terrains: ["glacier","ocean","forest"], points: 2 },
+  { id: "C228", shape: "hook", terrains: ["desert","pond","volcano"], points: 2 },
+  { id: "C229", shape: "hook", terrains: ["desert","pond","meadow"], points: 2 },
+  { id: "C230", shape: "hook", terrains: ["glacier","volcano","forest"], points: 2 },
+  { id: "C231", shape: "hook", terrains: ["ocean","mountain","meadow"], points: 2 },
+  { id: "C232", shape: "hook", terrains: ["desert","mountain","volcano"], points: 2 },
+  { id: "C233", shape: "ray", terrains: ["pond","mountain","meadow"], points: 3 },
+  { id: "C234", shape: "ray", terrains: ["desert","ocean","volcano"], points: 3 },
+  { id: "C235", shape: "ray", terrains: ["glacier","mountain","forest"], points: 3 },
+  { id: "C236", shape: "ray", terrains: ["desert","meadow","forest"], points: 3 },
+  { id: "C237", shape: "ray", terrains: ["glacier","ocean","volcano"], points: 3 },
+  { id: "C238", shape: "ray", terrains: ["ocean","pond","mountain"], points: 3 },
+  { id: "C239", shape: "ray", terrains: ["desert","pond","forest"], points: 3 },
+  { id: "C240", shape: "ray", terrains: ["glacier","meadow","volcano"], points: 3 },
+  { id: "C241", shape: "ray", terrains: ["mountain","meadow","forest"], points: 3 },
+  { id: "C242", shape: "ray", terrains: ["desert","ocean","pond"], points: 3 },
+  { id: "C243", shape: "ray", terrains: ["glacier","volcano","forest"], points: 3 },
+  { id: "C244", shape: "ray", terrains: ["mountain","meadow","volcano"], points: 3 },
+  { id: "C245", shape: "ray", terrains: ["desert","glacier","ocean"], points: 3 },
+  { id: "C246", shape: "ray", terrains: ["ocean","pond","meadow"], points: 3 },
+  { id: "C247", shape: "ray", terrains: ["glacier","pond","mountain"], points: 3 },
+  { id: "C248", shape: "ray", terrains: ["desert","volcano","forest"], points: 3 },
+  { id: "C249", shape: "ray", terrains: ["desert","mountain","volcano"], points: 3 },
+  { id: "C250", shape: "ray", terrains: ["glacier","ocean","meadow"], points: 3 },
+  { id: "C251", shape: "ray", terrains: ["pond","mountain","forest"], points: 3 },
+  { id: "C252", shape: "ray", terrains: ["pond","meadow","volcano"], points: 3 },];
+
 function generateDeck() {
-  const cards = [];
-  let idCounter = 1;
-  const usedKeys = new Set();
-
-  function addCard(shape, terrains, owner) {
-    const k = cardCanonicalKey(shape, terrains);
-    if (usedKeys.has(k)) return false;
-    usedKeys.add(k);
-    cards.push({
-      id: "C" + String(idCounter++).padStart(3, "0"),
-      shape,
-      terrains: terrains.slice(),
-      points: SHAPE_POINTS[shape],
-      owner: owner || "mixed"
-    });
-    return true;
-  }
-
-  // --- Built-around-terrain cards: 24 per terrain (8 per shape) ---
-  TERRAINS.forEach(T => {
-    const others = TERRAINS.filter(t => t !== T);
-    SHAPES.forEach(shape => {
-      addCard(shape, [T, T, T], T); // the "all one terrain" card
-      others.forEach((comp, idx) => {
-        if (shape === "triangle") {
-          addCard("triangle", [T, T, comp], T);
-        } else if (idx % 2 === 0) {
-          addCard(shape, [T, T, comp], T); // companion is an end
-        } else {
-          addCard(shape, [T, comp, T], T); // companion is the pivot
-        }
-      });
-    });
-  });
-
-  // --- Mixed cards: 24 total, all-distinct terrains (8 per shape) ---
-  SHAPES.forEach((shape, sIdx) => {
-    let made = 0;
-    let offset = 0;
-    while (made < 8 && offset < 500) {
-      const i = offset;
-      const a = TERRAINS[i % 8];
-      const b = TERRAINS[(i + 3 + sIdx) % 8];
-      const c = TERRAINS[(i + 5 + sIdx * 2) % 8];
-      offset++;
-      if (a === b || b === c || a === c) continue;
-      if (addCard(shape, [a, b, c], "mixed")) made++;
-    }
-  });
-
-  return cards;
+  // Return fresh copies so nothing can accidentally mutate the shared
+  // source array (e.g. via terrains.push(), or reassigning a card's fields).
+  return DECK_DATA.map(c => ({ id: c.id, shape: c.shape, terrains: c.terrains.slice(), points: c.points }));
 }
 
 if (typeof module !== "undefined") {

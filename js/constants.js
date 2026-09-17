@@ -52,27 +52,25 @@ const TERRAIN_COLORS = {
   mountain: "#787d82"   // grey
 };
 
-const SHAPES = ["triangle", "elbow", "line"];
+const SHAPES = ["cluster", "hook", "ray"];
 
 const SHAPE_POINTS = {
-  triangle: 1,
-  elbow: 2,
-  line: 3
+  cluster: 1,
+  hook: 2,
+  ray: 3
 };
 
 const SHAPE_LABELS = {
-  triangle: "Triangle",
-  elbow: "Elbow",
-  line: "Straight Line"
+  cluster: "Cluster",
+  hook: "Hook",
+  ray: "Ray"
 };
 
 // Component counts per the rulebook
 const TILE_COUNT_PER_TERRAIN = 14; // 112 total / 8 terrains -- this is the 6-PLAYER figure
 const TOTAL_TILES = TILE_COUNT_PER_TERRAIN * TERRAINS.length; // 112
 
-const TOTAL_CARDS = 216;
-const CARDS_PER_TERRAIN = 24; // "built around" each terrain
-const MIXED_CARDS = 24;
+const TOTAL_CARDS = 252; // hand-curated fixed deck -- see cards.js
 
 // Maximum private-hand size (Draw Cards). Drawing that would exceed this
 // draws only enough to reach exactly this many, rather than being blocked
@@ -94,7 +92,7 @@ const BOT_LEVELS = ["easy", "medium", "hard", "expert"];
 const BOT_LEVEL_LABELS = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
 const BOT_LEVEL_ICONS = { easy: "🌱", medium: "🖥️", hard: "🎯", expert: "🧠" };
 const BOT_LEVEL_DESCRIPTIONS = {
-  easy: "Good for young kids — mostly goes for easy Triangle matches, occasionally spots an Elbow or Straight Line.",
+  easy: "Good for young kids — mostly goes for easy Cluster matches, occasionally spots a Hook or Ray.",
   medium: "A fair opponent — recognizes all pattern types, but often plays the 2nd or 3rd best move instead of the best one.",
   hard: "Plays strategically — takes the best move most of the time and reacts to what other players are collecting.",
   expert: "Never makes a mistake — always takes the statistically best move and plays a fully optimized game."
@@ -105,7 +103,7 @@ if (typeof module !== "undefined") {
     TERRAINS, TERRAIN_LABELS, TERRAIN_IMAGES, TERRAIN_EMOJI, TERRAIN_COLORS,
     SHAPES, SHAPE_POINTS, SHAPE_LABELS,
     TILE_COUNT_PER_TERRAIN, TOTAL_TILES,
-    TOTAL_CARDS, CARDS_PER_TERRAIN, MIXED_CARDS,
+    TOTAL_CARDS,
     MAX_HAND_SIZE, tileCountPerTerrainForPlayerCount,
     BOT_LEVELS, BOT_LEVEL_LABELS, BOT_LEVEL_ICONS, BOT_LEVEL_DESCRIPTIONS
   };

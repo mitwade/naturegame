@@ -27,10 +27,10 @@ function dirIndexFromTo(from, to) {
 }
 
 // Given board (Map of "q,r" -> terrain) and a set of tile keys placed this
-// action, find every valid 3-tile pattern (triangle/elbow/line) that
+// action, find every valid 3-tile pattern (cluster/hook/ray) that
 // includes at least one newly placed tile. Returns array of:
 // { shape, tiles: [{q,r,terrain}, {q,r,terrain}, {q,r,terrain}] }
-// For triangle, tiles order is arbitrary. For elbow/line, tiles = [end, pivot, end].
+// For cluster, tiles order is arbitrary. For hook/ray, tiles = [end, pivot, end].
 function findPatternsIncluding(board, newTileKeys) {
   const results = [];
   const seen = new Set();
@@ -64,13 +64,13 @@ function findPatternsIncluding(board, newTileKeys) {
         if (!A || !C) continue;
 
         if (isAdjacent(A, C)) {
-          // Mutually touching trio => Triangle
-          addResult("triangle", [A, M, C]);
+          // Mutually touching trio => Cluster
+          addResult("cluster", [A, M, C]);
         } else {
           const dirA = dirIndexFromTo(M, A);
           const dirC = dirIndexFromTo(M, C);
           const opposite = (dirA + 3) % 6 === dirC;
-          addResult(opposite ? "line" : "elbow", [A, M, C]);
+          addResult(opposite ? "ray" : "hook", [A, M, C]);
         }
       }
     }
@@ -88,12 +88,12 @@ function findPatternsIncluding(board, newTileKeys) {
         const Q = tileAt(qk);
         if (Q.k === M.k) continue;
         if (isAdjacent(M, Q)) {
-          addResult("triangle", [M, P, Q]);
+          addResult("cluster", [M, P, Q]);
         } else {
           const dirM = dirIndexFromTo(P, M);
           const dirQ = dirIndexFromTo(P, Q);
           const opposite = (dirM + 3) % 6 === dirQ;
-          addResult(opposite ? "line" : "elbow", [M, P, Q]);
+          addResult(opposite ? "ray" : "hook", [M, P, Q]);
         }
       }
     }

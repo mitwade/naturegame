@@ -150,12 +150,12 @@ function renderBoard(svg, state, legalSpots, onSpotClick, pendingPlacements) {
 // Canonical direction offsets (see hexgrid.js HEX_DIRS ordering). Chosen so
 // each shape's 3-hex footprint has roughly the same bounding box, so all
 // three shapes render at the same hex size (see CARD_SCALE below) instead
-// of the old horizontal "line" layout — which was much wider than it was
-// tall — getting scaled down harder to fit than the compact triangle.
+// of the old horizontal "ray" layout — which was much wider than it was
+// tall — getting scaled down harder to fit than the compact cluster.
 const CARD_SHAPE_DIRS = {
-  line: { a: 1, c: 4 },    // diagonal bottom-left -> top-right straight chain
-  elbow: { a: 2, c: 4 },   // bent chain
-  triangle: { a: 0, c: 1 } // tight mutually-touching cluster
+  ray: { a: 1, c: 4 },      // diagonal bottom-left -> top-right straight chain
+  hook: { a: 2, c: 4 },     // bent chain
+  cluster: { a: 0, c: 1 }   // tight mutually-touching cluster
 };
 
 function cardHexPositions(shape, size = CARD_HEX_SIZE) {
@@ -181,11 +181,11 @@ function cardShapeBBox(shape) {
 // each side -> ~100px content width; height is free to grow a bit).
 const CARD_CONTENT_WIDTH = 100;
 const CARD_CONTENT_MAX_HEIGHT = 132;
-// Triangle currently looks right-sized, so it sets the ceiling: every shape
-// uses the SAME pixels-per-unit scale (never bigger than triangle's), just
+// Cluster currently looks right-sized, so it sets the ceiling: every shape
+// uses the SAME pixels-per-unit scale (never bigger than cluster's), just
 // clamped down further only if a shape's own bounding box wouldn't fit.
 const CARD_SCALE = (() => {
-  const b = cardShapeBBox("triangle");
+  const b = cardShapeBBox("cluster");
   return Math.min(CARD_CONTENT_WIDTH / b.w, CARD_CONTENT_MAX_HEIGHT / b.h);
 })();
 
@@ -207,7 +207,7 @@ function renderCard(cardId, { claimable, onClick, faceDown } = {}) {
   const defs = svgEl("defs", {});
   svg.appendChild(defs);
 
-  // terrains = [end1, pivot, end2] for elbow/line; for triangle, order is
+  // terrains = [end1, pivot, end2] for hook/ray; for cluster, order is
   // just [a,b,c] (any assignment is visually equivalent since all 3 mutually
   // touch and rotation/mirror is unrestricted).
   const [tEnd1, tPivot, tEnd2] = card.terrains;
